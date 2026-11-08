@@ -3,7 +3,7 @@ import { AuthProvider } from "@/lib/auth/provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import appCss from "../styles.css?url";
 
-const APP_NAME = "Pivot Desk";
+const APP_NAME = "Paper desk";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -14,7 +14,7 @@ export const Route = createRootRoute({
       { name: "theme-color", content: "#07090d" },
       {
         name: "description",
-        content: "Paper trading desk: pivot MACD divergence, volume, and agent vetoes.",
+        content: "Paper desk. Ten agents, one rulebook. Nothing trades until it survives unseen days.",
       },
     ],
     links: [

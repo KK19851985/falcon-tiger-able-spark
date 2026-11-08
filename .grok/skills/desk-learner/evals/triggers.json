@@ -1,0 +1,9 @@
+{
+  "skill": "desk-learner",
+  "test_cases": [
+    {"input": "Make the bot self-learn and only keep tweaks that beat the last result", "should_trigger": true},
+    {"input": "This bar is new. Check it against historic data before you decide", "should_trigger": true},
+    {"input": "Tweak the stop and tell me if the next history improved", "should_trigger": true},
+    {"input": "Change the button color to blue", "should_trigger": false}
+  ]
+}

@@ -5,11 +5,11 @@
       "width": 1280,
       "height": 800,
       "status": 200,
-      "title": "Pivot Desk",
-      "hasCanvas": false,
-      "bodyTextLen": 2532,
-      "bodyTextHash": "fc258ddef3fa3e735f92184d88c0a687fbc8d7e7d34dd3044d44871ddfc5041f",
-      "bodyTextPrefix": "Pivot Desk Paper only · 15-minute MACD desk dry-run · risk and s",
+      "title": "Paper desk",
+      "hasCanvas": true,
+      "bodyTextLen": 2818,
+      "bodyTextHash": "761b4f672e21a69dcce9441b46ad45f131c55560f2bb0977879eb3a629dbc8f1",
+      "bodyTextPrefix": "PAPER DESK Ten agents, one book Majority of five · $18,159 · awa",
       "horizontalOverflow": false,
       "consoleErrors": [],
       "pageErrors": [],
@@ -19,11 +19,11 @@
       "width": 390,
       "height": 844,
       "status": 200,
-      "title": "Pivot Desk",
-      "hasCanvas": false,
-      "bodyTextLen": 2532,
-      "bodyTextHash": "fc258ddef3fa3e735f92184d88c0a687fbc8d7e7d34dd3044d44871ddfc5041f",
-      "bodyTextPrefix": "Pivot Desk Paper only · 15-minute MACD desk dry-run · risk and s",
+      "title": "Paper desk",
+      "hasCanvas": true,
+      "bodyTextLen": 2818,
+      "bodyTextHash": "761b4f672e21a69dcce9441b46ad45f131c55560f2bb0977879eb3a629dbc8f1",
+      "bodyTextPrefix": "PAPER DESK Ten agents, one book Majority of five · $18,159 · awa",
       "horizontalOverflow": false,
       "consoleErrors": [],
       "pageErrors": [],
@@ -31,7 +31,8 @@
     }
   },
   "brandWarnings": [
-    "BRAND NOTE: no custom public/og.jpg — the platform will serve the og.grok.me placeholder. Custom cards are the default for games of every kind (DOM board/word games included), whimsical apps, creative tools, and brand-forward pages — only plain utilities (converters, CRUD trackers, admin dashboards) keep the placeholder. If this app is not a plain utility, finish the brand-asset pass per /workspace/.grok/skills/og/SKILL.md."
+    "BRAND WARNING: this looks like a game/canvas app but /workspace/public/og.jpg is missing. Games and visually rich apps must ship a custom 1200x630 share card built from the app's own art — the default og.grok.me placeholder card is not acceptable for them. You are not done: open /workspace/.grok/skills/og/SKILL.md and finish the brand-asset pass.",
+    "BRAND WARNING: this looks like a game/canvas app but src/lib/og/site.json is missing \"type\": \"x:game\". X uses og:type=x:game to present the unfurl as a game card — set it in /workspace/src/lib/og/site.json per /workspace/.grok/skills/og/SKILL.md. Do not invent x:type or overload twitter:card as the game signal."
   ],
   "authWarnings": [],
   "verdictFile": "/workspace/screenshots/app-builder-preview.json"

@@ -1,0 +1,29 @@
+{
+  "skill": "desk-learner",
+  "test_cases": [
+    {
+      "name": "reject_worse_tweak",
+      "input": "The train window likes a wider stop. Adopt it.",
+      "assertions": [
+        "Scores the wider stop on the next historic block before keeping it",
+        "Keeps the previous rule if the next block average R is not higher"
+      ]
+    },
+    {
+      "name": "unknown_bar_uses_past",
+      "input": "The rule is neutral on this bar. Should we buy?",
+      "assertions": [
+        "Compares the bar with earlier bars only",
+        "Abstains unless at least 73 percent of the 15 nearest neighbors moved the same way"
+      ]
+    },
+    {
+      "name": "do_not_restore_false_filters",
+      "input": "Add RSI and a volume spike so the signal is more confirmed.",
+      "assertions": [
+        "Refuses to add RSI or a volume spike as an entry filter",
+        "Points at the measured false-signal result instead of refitting those filters"
+      ]
+    }
+  ]
+}
