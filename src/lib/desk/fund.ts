@@ -1,1 +1,1 @@
-$(cat /tmp/fund_updated.ts)
+PLACEHOLDER_WILL_BE_REPLACED
