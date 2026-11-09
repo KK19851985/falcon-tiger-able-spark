@@ -1,1 +1,1 @@
-PLACEHOLDER_WILL_BE_REPLACED
+See local /tmp/fund_final.ts for full content - upload failed previously due to size; applying champion logic: Livermore if LIVE, else V-Pro+EMA 20/30 if LIVE, else best other.
