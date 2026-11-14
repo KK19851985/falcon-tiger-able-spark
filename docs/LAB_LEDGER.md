@@ -1427,3 +1427,413 @@ Rejected. Failed gates: deflated-sharpe.
 
 Deflated Sharpe uses 15 trials. Daily Sharpe -0.0571, hurdle 0.0450, z=-16.315. The z statistic is not a probability and it is not a confidence.
 
+## Cycle 22 — 1d — INSUFFICIENT — Livermore 3-step, 1d EMA direction
+
+- At: 2026-11-14T10:42:32.949Z
+- Commit: `a7b39dfa9f90cd3b40e0aab229233b5c4df7b648`
+- Seed: 20261114
+- Data: bundled src/lib/desk/clocks.ts daily plus cached OKX 1Dutc. 726 bars, 2024-11-18 → 2026-11-13. Hash `ea1894d6076c4e9305fd7c2b538af91c5deef84b08aa25921bbde1195806acbc`.
+- Binance probe: HTTP 451, not used.
+- Extension: replaced 2026-11-08; appended 2026-11-09, 2026-11-10, 2026-11-11, 2026-11-12, 2026-11-13.
+- Volume scale (bundle / public): BTC/USD 0.4104, ETH/USD 0.2378, SOL/USD 0.3890.
+- Champion: V-Pro 34/9, EMA 20/30, short-skip EMA 20, volume off (`f17c0e57977215b66ff31083e7d5118fdb0be734adb18eba43dc06d262cad753`).
+- Experiment: Livermore 3-step, 1d EMA direction (`ec53e792027e1de47cfe58f4d6bd977f8efe0685bd49463fc502973c6a927797`).
+
+### Why this experiment
+
+- Livermore order: direction, then the pivotal level, then volume.
+- EMA 50 on the traded timeframe. Long only above a rising average, short only below a falling average.
+- Pivot is the prior 20 bars, excluding the current bar. Breakout volume must be at least 1.5× the prior 20-bar average.
+- The breakout bar does not enter. The next 1 close(s) must still be beyond the level. Fill is the following open.
+- Stop is the broken pivotal level. The trade also exits when the close comes back through the EMA.
+- One position per coin. Compared with V-Pro 34/9 plus EMA 20/30 on this same tape. The skeptic is unchanged.
+- A higher bar is used only after it has closed.
+
+### Holdout, each coin on its own $10,000, after costs
+
+| Coin | Champion profit | Champion trades | Challenger profit | Challenger trades |
+| --- | ---: | ---: | ---: | ---: |
+| BTC/USD | $2,901.13 | 12 | $375.69 | 4 |
+| ETH/USD | $5,743.72 | 9 | -$192.00 | 5 |
+| SOL/USD | $6,237.65 | 9 | $2,333.54 | 6 |
+
+### Combined book
+
+| Window | Champion profit | Challenger profit | Champion max DD | Challenger max DD | Champion daily Sharpe | Challenger daily Sharpe |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| train | $5,941.96 | $2,637.08 | 35.24% | 14.17% | 0.0566 | 0.0417 |
+| holdout | $5,522.78 | $912.80 | 20.24% | 12.91% | 0.1002 | 0.0299 |
+
+Buy and hold on the holdout, equal weight, no costs: -$562.01.
+
+Bootstrap 2.5 to 97.5 percent of holdout profit, block resample of daily returns, seed 20261114: champion -$1,500.77 to $21,457.28; challenger -$2,724.35 to $7,358.59.
+
+Walk-forward folds (anchored, scored flat at each fold start):
+
+- 2025-08-16 → 2025-10-03: champion -$919.99 (9 trades), challenger -$277.25 (3 trades).
+- 2025-10-03 → 2025-11-20: champion $1,457.15 (9 trades), challenger $508.25 (4 trades).
+- 2025-11-20 → 2026-01-07: champion -$603.42 (4 trades), challenger -$94.79 (1 trades).
+- 2026-01-07 → 2026-02-24: champion $4,822.71 (6 trades), challenger $3,030.22 (6 trades).
+
+Full-sample trades: BTC/USD 28 → 12, ETH/USD 25 → 12, SOL/USD 24 → 13.
+
+Challenger holdout by BTC regime at the entry signal (bull above +5% over 20 days, bear below −5%):
+
+- bull: 7 trades, profit $760.61, mean trade 3.49%.
+- bear: 7 trades, profit $289.03, mean trade 1.16%.
+- sideways: 1 trades, profit -$136.84, mean trade -4.41%.
+
+### Verdict
+
+Insufficient sample: Need 30 closed trades on each coin over the full sample. Got BTC/USD 12 (champion 28), ETH/USD 12 (champion 25), SOL/USD 13 (champion 24). Other failed gates: train, holdout, walk-forward, deflated-sharpe, neighbours. Holdout buy-and-hold was -$562.01.
+
+- fail `trades`: Need 30 closed trades on each coin over the full sample. Got BTC/USD 12 (champion 28), ETH/USD 12 (champion 25), SOL/USD 13 (champion 24).
+- fail `train`: Train profit $5,941.96 → $2,637.08.
+- fail `holdout`: Holdout profit $5,522.78 → $912.80. Buy and hold on that window was -$562.01.
+- fail `walk-forward`: Beat the champion on 2 of 4 anchored folds. Most means more than half.
+- pass `drawdown`: Max drawdown train 35.24% → 14.17%, holdout 20.24% → 12.91%. No worse means less than or equal to the champion on both windows.
+- fail `deflated-sharpe`: Holdout daily Sharpe 0.0299 did not clear hurdle 0.0473 (z=-0.286, trials=7, variance=0.001161). The statistic is not a probability.
+- fail `neighbours`: 0 of 7 one-step neighbours beat the champion's holdout profit. A majority is required, so a one-cell spike does not pass.
+
+Deflated Sharpe uses 7 trials. Daily Sharpe 0.0299, hurdle 0.0473, z=-0.286. The z statistic is not a probability and it is not a confidence.
+
+## Cycle 23 — 15m — REJECT — Livermore 3-step, 15m EMA direction
+
+- At: 2026-11-14T10:42:37.474Z
+- Commit: `a7b39dfa9f90cd3b40e0aab229233b5c4df7b648`
+- Seed: 20261114
+- Data: https://www.okx.com/api/v5/market/history-candles?bar=15m. 70120 bars, 2024-11-14T00:00:00.000Z → 2026-11-14T09:45:00.000Z. Hash `91991f53169d15ef73e8ed26ec8dd2213576b85f8acefd255c038c1aea292a93`.
+- Binance probe: HTTP 451, not used.
+- Champion: V-Pro 34/9, EMA 20/30, short-skip EMA 20, volume off (`f17c0e57977215b66ff31083e7d5118fdb0be734adb18eba43dc06d262cad753`).
+- Experiment: Livermore 3-step, 15m EMA direction (`ec53e792027e1de47cfe58f4d6bd977f8efe0685bd49463fc502973c6a927797`).
+
+### Why this experiment
+
+- Livermore order: direction, then the pivotal level, then volume.
+- EMA 50 on the traded timeframe. Long only above a rising average, short only below a falling average.
+- Pivot is the prior 20 bars, excluding the current bar. Breakout volume must be at least 1.5× the prior 20-bar average.
+- The breakout bar does not enter. The next 1 close(s) must still be beyond the level. Fill is the following open.
+- Stop is the broken pivotal level. The trade also exits when the close comes back through the EMA.
+- One position per coin. Compared with V-Pro 34/9 plus EMA 20/30 on this same tape. The skeptic is unchanged.
+- A higher bar is used only after it has closed.
+
+### Holdout, each coin on its own $10,000, after costs
+
+| Coin | Champion profit | Champion trades | Challenger profit | Challenger trades |
+| --- | ---: | ---: | ---: | ---: |
+| BTC/USD | -$9,798.04 | 1280 | -$8,091.22 | 553 |
+| ETH/USD | -$9,749.10 | 1271 | -$7,018.59 | 530 |
+| SOL/USD | -$9,809.91 | 1295 | -$7,744.27 | 526 |
+
+### Combined book
+
+| Window | Champion profit | Challenger profit | Champion max DD | Challenger max DD | Champion daily Sharpe | Challenger daily Sharpe |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| train | -$9,932.08 | -$8,565.92 | 99.33% | 85.67% | -0.0468 | -0.0251 |
+| holdout | -$9,774.66 | -$7,577.39 | 98.00% | 78.78% | -0.0623 | -0.0338 |
+
+Buy and hold on the holdout, equal weight, no costs: -$3,376.06.
+
+Bootstrap 2.5 to 97.5 percent of holdout profit, block resample of daily returns, seed 20261114: champion -$9,884.46 to -$9,570.95; challenger -$8,464.92 to -$6,086.89.
+
+Walk-forward folds (anchored, scored flat at each fold start):
+
+- 2025-06-23 → 2025-08-17: champion -$5,042.22 (750 trades), challenger -$2,320.01 (293 trades).
+- 2025-08-17 → 2025-10-10: champion -$4,379.51 (708 trades), challenger -$1,351.78 (284 trades).
+- 2025-10-10 → 2025-12-04: champion -$4,586.04 (710 trades), challenger -$1,520.01 (302 trades).
+- 2025-12-04 → 2026-01-27: champion -$6,005.61 (768 trades), challenger -$3,317.33 (306 trades).
+
+Full-sample trades: BTC/USD 3247 → 1350, ETH/USD 3173 → 1297, SOL/USD 3206 → 1339.
+
+Challenger holdout by BTC regime at the entry signal (bull above +5% over 20 days, bear below −5%):
+
+- bull: 475 trades, profit -$2,259.09, mean trade -0.32%.
+- bear: 449 trades, profit -$3,050.83, mean trade -0.35%.
+- sideways: 685 trades, profit -$2,267.48, mean trade -0.17%.
+
+### Verdict
+
+Rejected. Failed gates: deflated-sharpe. Holdout buy-and-hold was -$3,376.06.
+
+- pass `trades`: Each coin closed at least 30 trades on the full sample (BTC/USD 1350 (champion 3247), ETH/USD 1297 (champion 3173), SOL/USD 1339 (champion 3206)).
+- pass `train`: Train profit -$9,932.08 → -$8,565.92.
+- pass `holdout`: Holdout profit -$9,774.66 → -$7,577.39. Buy and hold on that window was -$3,376.06.
+- pass `walk-forward`: Beat the champion on 4 of 4 anchored folds. Most means more than half.
+- pass `drawdown`: Max drawdown train 99.33% → 85.67%, holdout 98.00% → 78.78%. No worse means less than or equal to the champion on both windows.
+- fail `deflated-sharpe`: Holdout daily Sharpe -0.0338 did not clear hurdle 0.0467 (z=-13.019, trials=16, variance=0.000674). The statistic is not a probability.
+- pass `neighbours`: 7 of 7 one-step neighbours beat the champion's holdout profit, which is a majority.
+
+Deflated Sharpe uses 16 trials. Daily Sharpe -0.0338, hurdle 0.0467, z=-13.019. The z statistic is not a probability and it is not a confidence.
+
+## Cycle 24 — 15m — REJECT — Livermore 3-step, 4h EMA direction
+
+- At: 2026-11-14T10:42:41.880Z
+- Commit: `a7b39dfa9f90cd3b40e0aab229233b5c4df7b648`
+- Seed: 20261114
+- Data: https://www.okx.com/api/v5/market/history-candles?bar=15m. 70120 bars, 2024-11-14T00:00:00.000Z → 2026-11-14T09:45:00.000Z. Hash `91991f53169d15ef73e8ed26ec8dd2213576b85f8acefd255c038c1aea292a93`.
+- Binance probe: HTTP 451, not used.
+- Champion: V-Pro 34/9, EMA 20/30, short-skip EMA 20, volume off (`f17c0e57977215b66ff31083e7d5118fdb0be734adb18eba43dc06d262cad753`).
+- Experiment: Livermore 3-step, 4h EMA direction (`0de1f24e37ba5dd3488a108c25c2fe3d9e85d60a2b8d9da8f5057e22aad592e8`).
+
+### Why this experiment
+
+- Livermore order: direction, then the pivotal level, then volume.
+- EMA 50 on closed 4-hour bars. Long only above a rising average, short only below a falling average.
+- Pivot is the prior 20 bars, excluding the current bar. Breakout volume must be at least 1.5× the prior 20-bar average.
+- The breakout bar does not enter. The next 1 close(s) must still be beyond the level. Fill is the following open.
+- Stop is the broken pivotal level. The trade also exits when the close comes back through the EMA.
+- One position per coin. Compared with V-Pro 34/9 plus EMA 20/30 on this same tape. The skeptic is unchanged.
+- A higher bar is used only after it has closed.
+
+### Holdout, each coin on its own $10,000, after costs
+
+| Coin | Champion profit | Champion trades | Challenger profit | Challenger trades |
+| --- | ---: | ---: | ---: | ---: |
+| BTC/USD | -$9,798.04 | 1280 | -$1,365.10 | 79 |
+| ETH/USD | -$9,749.10 | 1271 | $2,500.29 | 74 |
+| SOL/USD | -$9,809.91 | 1295 | $1,891.82 | 92 |
+
+### Combined book
+
+| Window | Champion profit | Challenger profit | Champion max DD | Challenger max DD | Champion daily Sharpe | Challenger daily Sharpe |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| train | -$9,932.08 | -$3,653.13 | 99.33% | 45.87% | -0.0468 | -0.0086 |
+| holdout | -$9,774.66 | $1,424.46 | 98.00% | 38.60% | -0.0623 | 0.0037 |
+
+Buy and hold on the holdout, equal weight, no costs: -$3,376.06.
+
+Bootstrap 2.5 to 97.5 percent of holdout profit, block resample of daily returns, seed 20261114: champion -$9,884.46 to -$9,570.95; challenger -$3,824.78 to $14,251.34.
+
+Walk-forward folds (anchored, scored flat at each fold start):
+
+- 2025-06-23 → 2025-08-17: champion -$5,042.22 (750 trades), challenger -$716.71 (41 trades).
+- 2025-08-17 → 2025-10-10: champion -$4,379.51 (708 trades), challenger -$363.31 (59 trades).
+- 2025-10-10 → 2025-12-04: champion -$4,586.04 (710 trades), challenger -$887.49 (49 trades).
+- 2025-12-04 → 2026-01-27: champion -$6,005.61 (768 trades), challenger -$523.02 (46 trades).
+
+Full-sample trades: BTC/USD 3247 → 195, ETH/USD 3173 → 199, SOL/USD 3206 → 225.
+
+Challenger holdout by BTC regime at the entry signal (bull above +5% over 20 days, bear below −5%):
+
+- bull: 61 trades, profit -$1,064.86, mean trade -0.48%.
+- bear: 49 trades, profit -$1,497.48, mean trade -0.82%.
+- sideways: 135 trades, profit $3,986.80, mean trade 0.88%.
+
+### Verdict
+
+Rejected. Failed gates: deflated-sharpe. Holdout buy-and-hold was -$3,376.06.
+
+- pass `trades`: Each coin closed at least 30 trades on the full sample (BTC/USD 195 (champion 3247), ETH/USD 199 (champion 3173), SOL/USD 225 (champion 3206)).
+- pass `train`: Train profit -$9,932.08 → -$3,653.13.
+- pass `holdout`: Holdout profit -$9,774.66 → $1,424.46. Buy and hold on that window was -$3,376.06.
+- pass `walk-forward`: Beat the champion on 4 of 4 anchored folds. Most means more than half.
+- pass `drawdown`: Max drawdown train 99.33% → 45.87%, holdout 98.00% → 38.60%. No worse means less than or equal to the champion on both windows.
+- fail `deflated-sharpe`: Holdout daily Sharpe 0.0037 did not clear hurdle 0.0552 (z=-8.618, trials=17, variance=0.000913). The statistic is not a probability.
+- pass `neighbours`: 7 of 7 one-step neighbours beat the champion's holdout profit, which is a majority.
+
+Deflated Sharpe uses 17 trials. Daily Sharpe 0.0037, hurdle 0.0552, z=-8.618. The z statistic is not a probability and it is not a confidence.
+
+## Cycle 25 — 15m — REJECT — Livermore 3-step, 4h EMA direction, volume 2×
+
+- At: 2026-11-14T10:43:00.243Z
+- Commit: `a7b39dfa9f90cd3b40e0aab229233b5c4df7b648`
+- Seed: 20261114
+- Data: https://www.okx.com/api/v5/market/history-candles?bar=15m. 70120 bars, 2024-11-14T00:00:00.000Z → 2026-11-14T09:45:00.000Z. Hash `91991f53169d15ef73e8ed26ec8dd2213576b85f8acefd255c038c1aea292a93`.
+- Binance probe: HTTP 451, not used.
+- Champion: V-Pro 34/9, EMA 20/30, short-skip EMA 20, volume off (`f17c0e57977215b66ff31083e7d5118fdb0be734adb18eba43dc06d262cad753`).
+- Experiment: Livermore 3-step, 4h EMA direction, volume 2× (`e5d531260e6e189fd5dfa18af14b87c83b74cf41669384f962e3002457fcd06f`).
+
+### Why this experiment
+
+- Livermore order: direction, then the pivotal level, then volume.
+- EMA 50 on closed 4-hour bars. Long only above a rising average, short only below a falling average.
+- Pivot is the prior 20 bars, excluding the current bar. Breakout volume must be at least 2× the prior 20-bar average.
+- The breakout bar does not enter. The next 1 close(s) must still be beyond the level. Fill is the following open.
+- Stop is the broken pivotal level. The trade also exits when the close comes back through the EMA.
+- One position per coin. Compared with V-Pro 34/9 plus EMA 20/30 on this same tape. The skeptic is unchanged.
+- A higher bar is used only after it has closed.
+
+### Holdout, each coin on its own $10,000, after costs
+
+| Coin | Champion profit | Champion trades | Challenger profit | Challenger trades |
+| --- | ---: | ---: | ---: | ---: |
+| BTC/USD | -$9,798.04 | 1280 | -$832.24 | 73 |
+| ETH/USD | -$9,749.10 | 1271 | $2,416.67 | 72 |
+| SOL/USD | -$9,809.91 | 1295 | $1,703.69 | 87 |
+
+### Combined book
+
+| Window | Champion profit | Challenger profit | Champion max DD | Challenger max DD | Champion daily Sharpe | Challenger daily Sharpe |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| train | -$9,932.08 | -$3,563.50 | 99.33% | 47.65% | -0.0468 | -0.0084 |
+| holdout | -$9,774.66 | $1,568.14 | 98.00% | 38.83% | -0.0623 | 0.0040 |
+
+Buy and hold on the holdout, equal weight, no costs: -$3,376.06.
+
+Bootstrap 2.5 to 97.5 percent of holdout profit, block resample of daily returns, seed 20261114: champion -$9,884.46 to -$9,570.95; challenger -$3,743.59 to $14,899.79.
+
+Walk-forward folds (anchored, scored flat at each fold start):
+
+- 2025-06-23 → 2025-08-17: champion -$5,042.22 (750 trades), challenger -$665.89 (37 trades).
+- 2025-08-17 → 2025-10-10: champion -$4,379.51 (708 trades), challenger -$413.21 (55 trades).
+- 2025-10-10 → 2025-12-04: champion -$4,586.04 (710 trades), challenger -$1,032.52 (48 trades).
+- 2025-12-04 → 2026-01-27: champion -$6,005.61 (768 trades), challenger -$488.22 (44 trades).
+
+Full-sample trades: BTC/USD 3247 → 181, ETH/USD 3173 → 189, SOL/USD 3206 → 211.
+
+Challenger holdout by BTC regime at the entry signal (bull above +5% over 20 days, bear below −5%):
+
+- bull: 56 trades, profit -$1,019.74, mean trade -0.50%.
+- bear: 46 trades, profit -$1,418.50, mean trade -0.83%.
+- sideways: 130 trades, profit $4,006.38, mean trade 0.91%.
+
+### Verdict
+
+Rejected. Failed gates: deflated-sharpe. Holdout buy-and-hold was -$3,376.06.
+
+- pass `trades`: Each coin closed at least 30 trades on the full sample (BTC/USD 181 (champion 3247), ETH/USD 189 (champion 3173), SOL/USD 211 (champion 3206)).
+- pass `train`: Train profit -$9,932.08 → -$3,563.50.
+- pass `holdout`: Holdout profit -$9,774.66 → $1,568.14. Buy and hold on that window was -$3,376.06.
+- pass `walk-forward`: Beat the champion on 4 of 4 anchored folds. Most means more than half.
+- pass `drawdown`: Max drawdown train 99.33% → 47.65%, holdout 98.00% → 38.83%. No worse means less than or equal to the champion on both windows.
+- fail `deflated-sharpe`: Holdout daily Sharpe 0.0040 did not clear hurdle 0.0614 (z=-9.606, trials=18, variance=0.001096). The statistic is not a probability.
+- pass `neighbours`: 7 of 7 one-step neighbours beat the champion's holdout profit, which is a majority.
+
+Deflated Sharpe uses 18 trials. Daily Sharpe 0.0040, hurdle 0.0614, z=-9.606. The z statistic is not a probability and it is not a confidence.
+
+## Cycle 26 — 15m — REJECT — Livermore 3-step, 4h EMA direction, pivot 40
+
+- At: 2026-11-14T10:43:04.516Z
+- Commit: `a7b39dfa9f90cd3b40e0aab229233b5c4df7b648`
+- Seed: 20261114
+- Data: https://www.okx.com/api/v5/market/history-candles?bar=15m. 70120 bars, 2024-11-14T00:00:00.000Z → 2026-11-14T09:45:00.000Z. Hash `91991f53169d15ef73e8ed26ec8dd2213576b85f8acefd255c038c1aea292a93`.
+- Binance probe: HTTP 451, not used.
+- Champion: V-Pro 34/9, EMA 20/30, short-skip EMA 20, volume off (`f17c0e57977215b66ff31083e7d5118fdb0be734adb18eba43dc06d262cad753`).
+- Experiment: Livermore 3-step, 4h EMA direction, pivot 40 (`4854582feb4ff71961cac8ee3371a27db1f5975dae6bc0701e839239a2f94ec7`).
+
+### Why this experiment
+
+- Livermore order: direction, then the pivotal level, then volume.
+- EMA 50 on closed 4-hour bars. Long only above a rising average, short only below a falling average.
+- Pivot is the prior 40 bars, excluding the current bar. Breakout volume must be at least 1.5× the prior 20-bar average.
+- The breakout bar does not enter. The next 1 close(s) must still be beyond the level. Fill is the following open.
+- Stop is the broken pivotal level. The trade also exits when the close comes back through the EMA.
+- One position per coin. Compared with V-Pro 34/9 plus EMA 20/30 on this same tape. The skeptic is unchanged.
+- A higher bar is used only after it has closed.
+
+### Holdout, each coin on its own $10,000, after costs
+
+| Coin | Champion profit | Champion trades | Challenger profit | Challenger trades |
+| --- | ---: | ---: | ---: | ---: |
+| BTC/USD | -$9,798.04 | 1280 | -$1,190.00 | 75 |
+| ETH/USD | -$9,749.10 | 1271 | -$182.64 | 66 |
+| SOL/USD | -$9,809.91 | 1295 | $2,680.19 | 80 |
+
+### Combined book
+
+| Window | Champion profit | Challenger profit | Champion max DD | Challenger max DD | Champion daily Sharpe | Challenger daily Sharpe |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| train | -$9,932.08 | -$3,555.05 | 99.33% | 42.82% | -0.0468 | -0.0089 |
+| holdout | -$9,774.66 | $767.06 | 98.00% | 36.24% | -0.0623 | 0.0025 |
+
+Buy and hold on the holdout, equal weight, no costs: -$3,376.06.
+
+Bootstrap 2.5 to 97.5 percent of holdout profit, block resample of daily returns, seed 20261114: champion -$9,884.46 to -$9,570.95; challenger -$3,603.15 to $11,179.96.
+
+Walk-forward folds (anchored, scored flat at each fold start):
+
+- 2025-06-23 → 2025-08-17: champion -$5,042.22 (750 trades), challenger -$72.05 (38 trades).
+- 2025-08-17 → 2025-10-10: champion -$4,379.51 (708 trades), challenger -$44.11 (52 trades).
+- 2025-10-10 → 2025-12-04: champion -$4,586.04 (710 trades), challenger -$767.35 (45 trades).
+- 2025-12-04 → 2026-01-27: champion -$6,005.61 (768 trades), challenger -$644.79 (41 trades).
+
+Full-sample trades: BTC/USD 3247 → 184, ETH/USD 3173 → 178, SOL/USD 3206 → 204.
+
+Challenger holdout by BTC regime at the entry signal (bull above +5% over 20 days, bear below −5%):
+
+- bull: 56 trades, profit -$1,023.67, mean trade -0.50%.
+- bear: 46 trades, profit -$1,192.28, mean trade -0.68%.
+- sideways: 119 trades, profit $2,983.01, mean trade 0.75%.
+
+### Verdict
+
+Rejected. Failed gates: deflated-sharpe. Holdout buy-and-hold was -$3,376.06.
+
+- pass `trades`: Each coin closed at least 30 trades on the full sample (BTC/USD 184 (champion 3247), ETH/USD 178 (champion 3173), SOL/USD 204 (champion 3206)).
+- pass `train`: Train profit -$9,932.08 → -$3,555.05.
+- pass `holdout`: Holdout profit -$9,774.66 → $767.06. Buy and hold on that window was -$3,376.06.
+- pass `walk-forward`: Beat the champion on 4 of 4 anchored folds. Most means more than half.
+- pass `drawdown`: Max drawdown train 99.33% → 42.82%, holdout 98.00% → 36.24%. No worse means less than or equal to the champion on both windows.
+- fail `deflated-sharpe`: Holdout daily Sharpe 0.0025 did not clear hurdle 0.0658 (z=-10.580, trials=19, variance=0.001226). The statistic is not a probability.
+- pass `neighbours`: 7 of 7 one-step neighbours beat the champion's holdout profit, which is a majority.
+
+Deflated Sharpe uses 19 trials. Daily Sharpe 0.0025, hurdle 0.0658, z=-10.580. The z statistic is not a probability and it is not a confidence.
+
+## Cycle 27 — 15m — REJECT — Livermore 3-step, 4h EMA direction, EMA 20
+
+- At: 2026-11-14T10:43:08.729Z
+- Commit: `a7b39dfa9f90cd3b40e0aab229233b5c4df7b648`
+- Seed: 20261114
+- Data: https://www.okx.com/api/v5/market/history-candles?bar=15m. 70120 bars, 2024-11-14T00:00:00.000Z → 2026-11-14T09:45:00.000Z. Hash `91991f53169d15ef73e8ed26ec8dd2213576b85f8acefd255c038c1aea292a93`.
+- Binance probe: HTTP 451, not used.
+- Champion: V-Pro 34/9, EMA 20/30, short-skip EMA 20, volume off (`f17c0e57977215b66ff31083e7d5118fdb0be734adb18eba43dc06d262cad753`).
+- Experiment: Livermore 3-step, 4h EMA direction, EMA 20 (`8bb990b88702c9751e05fecc807645103e17a2866e5f5ec4275858598c532cba`).
+
+### Why this experiment
+
+- Livermore order: direction, then the pivotal level, then volume.
+- EMA 20 on closed 4-hour bars. Long only above a rising average, short only below a falling average.
+- Pivot is the prior 20 bars, excluding the current bar. Breakout volume must be at least 1.5× the prior 20-bar average.
+- The breakout bar does not enter. The next 1 close(s) must still be beyond the level. Fill is the following open.
+- Stop is the broken pivotal level. The trade also exits when the close comes back through the EMA.
+- One position per coin. Compared with V-Pro 34/9 plus EMA 20/30 on this same tape. The skeptic is unchanged.
+- A higher bar is used only after it has closed.
+
+### Holdout, each coin on its own $10,000, after costs
+
+| Coin | Champion profit | Champion trades | Challenger profit | Challenger trades |
+| --- | ---: | ---: | ---: | ---: |
+| BTC/USD | -$9,798.04 | 1280 | -$1,180.56 | 126 |
+| ETH/USD | -$9,749.10 | 1271 | -$719.85 | 132 |
+| SOL/USD | -$9,809.91 | 1295 | -$1,492.86 | 127 |
+
+### Combined book
+
+| Window | Champion profit | Challenger profit | Champion max DD | Challenger max DD | Champion daily Sharpe | Challenger daily Sharpe |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| train | -$9,932.08 | -$4,717.17 | 99.33% | 52.18% | -0.0468 | -0.0102 |
+| holdout | -$9,774.66 | -$672.90 | 98.00% | 49.29% | -0.0623 | -0.0006 |
+
+Buy and hold on the holdout, equal weight, no costs: -$3,376.06.
+
+Bootstrap 2.5 to 97.5 percent of holdout profit, block resample of daily returns, seed 20261114: champion -$9,884.46 to -$9,570.95; challenger -$5,145.89 to $11,511.78.
+
+Walk-forward folds (anchored, scored flat at each fold start):
+
+- 2025-06-23 → 2025-08-17: champion -$5,042.22 (750 trades), challenger -$1,142.25 (73 trades).
+- 2025-08-17 → 2025-10-10: champion -$4,379.51 (708 trades), challenger -$614.70 (73 trades).
+- 2025-10-10 → 2025-12-04: champion -$4,586.04 (710 trades), challenger -$1,283.71 (71 trades).
+- 2025-12-04 → 2026-01-27: champion -$6,005.61 (768 trades), challenger -$951.44 (66 trades).
+
+Full-sample trades: BTC/USD 3247 → 317, ETH/USD 3173 → 316, SOL/USD 3206 → 341.
+
+Challenger holdout by BTC regime at the entry signal (bull above +5% over 20 days, bear below −5%):
+
+- bull: 113 trades, profit -$1,833.13, mean trade -0.46%.
+- bear: 90 trades, profit -$2,179.97, mean trade -0.62%.
+- sideways: 182 trades, profit $3,340.20, mean trade 0.53%.
+
+### Verdict
+
+Rejected. Failed gates: deflated-sharpe. Holdout buy-and-hold was -$3,376.06.
+
+- pass `trades`: Each coin closed at least 30 trades on the full sample (BTC/USD 317 (champion 3247), ETH/USD 316 (champion 3173), SOL/USD 341 (champion 3206)).
+- pass `train`: Train profit -$9,932.08 → -$4,717.17.
+- pass `holdout`: Holdout profit -$9,774.66 → -$672.90. Buy and hold on that window was -$3,376.06.
+- pass `walk-forward`: Beat the champion on 4 of 4 anchored folds. Most means more than half.
+- pass `drawdown`: Max drawdown train 99.33% → 52.18%, holdout 98.00% → 49.29%. No worse means less than or equal to the champion on both windows.
+- fail `deflated-sharpe`: Holdout daily Sharpe -0.0006 did not clear hurdle 0.0687 (z=-11.568, trials=20, variance=0.001307). The statistic is not a probability.
+- pass `neighbours`: 7 of 7 one-step neighbours beat the champion's holdout profit, which is a majority.
+
+Deflated Sharpe uses 20 trials. Daily Sharpe -0.0006, hurdle 0.0687, z=-11.568. The z statistic is not a probability and it is not a confidence.
+
