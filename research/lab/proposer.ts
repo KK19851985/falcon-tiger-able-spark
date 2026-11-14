@@ -126,8 +126,11 @@ function readState(ledger: ProposerView[]): DirectionState {
       heldUp = key;
       continue;
     }
-    if (row.verdict !== "REJECT" || !row.holdoutProfit) continue;
-    fails.set(key, (fails.get(key) ?? 0) + 1);
+    if ((row.verdict !== "REJECT" && row.verdict !== "INSUFFICIENT") || !row.holdoutProfit) continue;
+    // A rejection is a failed direction. An underpowered trial is not: the
+    // sample was too small to judge, but a better holdout is still a reason
+    // to take the next step on that same knob.
+    if (row.verdict === "REJECT") fails.set(key, (fails.get(key) ?? 0) + 1);
     const improved = row.holdoutProfit.challenger > row.holdoutProfit.champion;
     if (improved) heldUp = key;
     else if (heldUp === key) heldUp = null;

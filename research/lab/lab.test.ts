@@ -96,6 +96,15 @@ describe("proposer", () => {
     assert.notEqual(again.move.hash, first.move.hash);
   });
 
+  it("refines an underpowered trial that still improved the holdout", () => {
+    const tried = { ...BASELINE, vproBand: 40 };
+    const next = propose([view(tried, "up", "INSUFFICIENT", 100, 180)], silent);
+    assert.equal(next.kind, "experiment");
+    if (next.kind !== "experiment") return;
+    assert.equal(next.move.knob, "vproBand");
+    assert.equal(next.move.to, 50);
+  });
+
   it("refines a direction that improved the holdout", () => {
     const tried = { ...BASELINE, vproBand: 40 };
     const next = propose([view(tried, "up", "REJECT", 100, 180)], silent);
