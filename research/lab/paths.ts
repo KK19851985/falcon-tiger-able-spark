@@ -19,3 +19,9 @@ export const OUTPUT_PREFIXES = [
   "research/lab/data/",
   "docs/LAB_LEDGER.md",
 ];
+
+/** True for a path the cycle itself writes. Used so those files do not mark the code commit dirty. */
+export function isOutputPath(file: string): boolean {
+  const normalized = file.replaceAll("\\", "/").replace(/^\.\//, "");
+  return OUTPUT_PREFIXES.some((prefix) => normalized === prefix || normalized.startsWith(prefix));
+}

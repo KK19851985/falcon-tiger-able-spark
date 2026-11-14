@@ -7,7 +7,7 @@ import { execSync } from "node:child_process";
 import { SEED } from "./constants.ts";
 import { describeConfig } from "./format.ts";
 import { loadMarket } from "./market.ts";
-import { OUTPUT_PREFIXES, PATHS, REPO_ROOT } from "./paths.ts";
+import { PATHS, REPO_ROOT, isOutputPath } from "./paths.ts";
 import { adjacentMoves, propose, toProposerView } from "./proposer.ts";
 import { appendCycle, consoleSummary, readLedger } from "./recorder.ts";
 import { judge } from "./skeptic.ts";
@@ -106,15 +106,14 @@ async function main() {
 
 function codeCommit(): string {
   const hash = execSync("git rev-parse HEAD", { cwd: REPO_ROOT, encoding: "utf8" }).trim();
-  const status = execSync("git status --porcelain", { cwd: REPO_ROOT, encoding: "utf8" });
+  // -uall lists each new file. The default collapses an untracked docs/ directory
+  // into one line, which would look like a code change.
+  const status = execSync("git status --porcelain --untracked-files=all", { cwd: REPO_ROOT, encoding: "utf8" });
   const dirty = status
     .split("\n")
     .map((line) => line.trimEnd())
     .filter(Boolean)
-    .filter((line) => {
-      const file = line.slice(3).trim();
-      return !OUTPUT_PREFIXES.some((prefix) => file === prefix || file.startsWith(prefix));
-    });
+    .filter((line) => !isOutputPath(line.slice(3).trim()));
   return dirty.length ? `${hash}+dirty` : hash;
 }
 

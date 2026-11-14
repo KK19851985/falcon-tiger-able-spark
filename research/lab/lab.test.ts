@@ -8,7 +8,7 @@ import { ZERO_COSTS, netReturn, runBook } from "./execute.ts";
 import { configHash } from "./hash.ts";
 import { vproStance } from "./indicators.ts";
 import { isPartialLast, mergeSymbol, type ExtCandle } from "./merge.ts";
-import { OUTPUT_PREFIXES } from "./paths.ts";
+import { isOutputPath } from "./paths.ts";
 import { adjacentMoves, propose } from "./proposer.ts";
 import { appendCycle, readLedger } from "./recorder.ts";
 import { combineStances } from "./strategy.ts";
@@ -367,7 +367,11 @@ describe("desk parity", () => {
 
 describe("outputs", () => {
   it("never points a cycle output at the desk source", () => {
-    for (const prefix of OUTPUT_PREFIXES) assert.equal(prefix.startsWith("src/"), false);
+    assert.equal(isOutputPath("docs/LAB_LEDGER.md"), true);
+    assert.equal(isOutputPath("research/lab/data/extension-cache.json"), true);
+    assert.equal(isOutputPath("research/lab/ledger.jsonl"), true);
+    assert.equal(isOutputPath("src/lib/desk/fund.ts"), false);
+    assert.equal(isOutputPath("docs/other.md"), false);
     const moves = adjacentMoves(BASELINE);
     assert.ok(moves.length >= 8);
     for (const move of moves) {
