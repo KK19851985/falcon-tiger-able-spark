@@ -1837,3 +1837,155 @@ Rejected. Failed gates: deflated-sharpe. Holdout buy-and-hold was -$3,376.06.
 
 Deflated Sharpe uses 20 trials. Daily Sharpe -0.0006, hurdle 0.0687, z=-11.568. The z statistic is not a probability and it is not a confidence.
 
+## Cycle 28 — 15m — REJECT — Livermore 3-step, 4h EMA direction, long tape
+
+- At: 2026-11-14T11:03:46.815Z
+- Commit: `3120af684560798cdf86a0aa8189b676cdd1a360`
+- Seed: 20261114
+- Data: https://www.okx.com/api/v5/market/history-candles?bar=15m (long tape, fetched 2026-11-14T10:58:56.355Z). 214659 bars, 2020-09-30T10:00:00.000Z → 2026-11-14T10:30:00.000Z. Hash `ad6835c4a0b6cc0c9747e8b07c7266c51670cdeb715ad23e663115f24aa71619`.
+- Binance probe: HTTP 451, not used.
+- Champion: V-Pro 34/9, EMA 20/30, short-skip EMA 20, volume off (`f17c0e57977215b66ff31083e7d5118fdb0be734adb18eba43dc06d262cad753`).
+- Experiment: Livermore 3-step, 4h EMA direction, long tape (`0de1f24e37ba5dd3488a108c25c2fe3d9e85d60a2b8d9da8f5057e22aad592e8`).
+
+### Why this experiment
+
+- Same Livermore rule as the short-tape candidate: 15-minute entries, EMA 50 direction from closed 4-hour bars, 20-bar pivot, confirmation on the next close.
+- The tape is the longer OKX public 15-minute history. The short tape file was not overwritten.
+- Joined range 2020-09-30T10:00:00.000Z → 2026-11-14T10:30:00.000Z, 214659 bars, sha256 ad6835c4a0b6cc0c9747e8b07c7266c51670cdeb715ad23e663115f24aa71619.
+- Joined missing slots 0, joined duplicate timestamps 0.
+- Bitcoin and Ethereum history begins before Solana. The book uses only timestamps present on all three.
+- Train is the first 60% after 384 warmup bars. Holdout is the rest. Those timestamps are frozen in the long-tape file.
+- Fees are 0.1% taker plus 5 bps slippage on entry and exit. The skeptic's gates are unchanged. Nothing is applied to the desk.
+- This is the validation of the 1.5× volume candidate. Yearly books, regime split, fee stress, the named neighbours, and the shuffled-entry control are recorded on this row. They do not add or remove a skeptic gate.
+
+### Holdout, each coin on its own $10,000, after costs
+
+| Coin | Champion profit | Champion trades | Challenger profit | Challenger trades |
+| --- | ---: | ---: | ---: | ---: |
+| BTC/USD | -$9,999.94 | 3983 | -$2,366.92 | 238 |
+| ETH/USD | -$9,999.59 | 3938 | -$2,262.35 | 254 |
+| SOL/USD | -$9,999.89 | 3981 | -$1,533.47 | 266 |
+
+### Combined book
+
+| Window | Champion profit | Challenger profit | Champion max DD | Challenger max DD | Champion daily Sharpe | Challenger daily Sharpe |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| train | -$10,000.00 | $11,628.98 | 100.00% | 51.06% | -0.0267 | 0.0037 |
+| holdout | -$9,999.83 | -$1,180.06 | 100.00% | 47.75% | -0.0531 | -0.0002 |
+
+Buy and hold on the holdout, equal weight, no costs: -$3,585.61.
+
+Bootstrap 2.5 to 97.5 percent of holdout profit, block resample of daily returns, seed 20261114: champion -$9,999.94 to -$9,999.39; challenger -$6,405.57 to $13,126.55.
+
+Walk-forward folds (anchored, scored flat at each fold start):
+
+- 2022-08-05 → 2023-01-19: champion -$9,124.18 (2292 trades), challenger $2,531.94 (118 trades).
+- 2023-01-19 → 2023-07-05: champion -$8,326.35 (2189 trades), challenger -$721.23 (134 trades).
+- 2023-07-05 → 2023-12-20: champion -$8,894.29 (2317 trades), challenger $2,593.77 (127 trades).
+- 2023-12-20 → 2024-06-04: champion -$9,019.14 (2332 trades), challenger -$2,046.57 (141 trades).
+
+Full-sample trades: BTC/USD 10079 → 578, ETH/USD 9935 → 612, SOL/USD 9897 → 622.
+
+Challenger holdout by BTC regime at the entry signal (bull above +5% over 20 days, bear below −5%):
+
+- bull: 207 trades, profit $700.94, mean trade 0.10%.
+- bear: 194 trades, profit -$3,724.06, mean trade -0.60%.
+- sideways: 357 trades, profit $1,843.06, mean trade 0.22%.
+
+### Verdict
+
+Rejected. Failed gates: deflated-sharpe. Holdout buy-and-hold was -$3,585.61.
+
+- pass `trades`: Each coin closed at least 30 trades on the full sample (BTC/USD 578 (champion 10079), ETH/USD 612 (champion 9935), SOL/USD 622 (champion 9897)).
+- pass `train`: Train profit -$10,000.00 → $11,628.98.
+- pass `holdout`: Holdout profit -$9,999.83 → -$1,180.06. Buy and hold on that window was -$3,585.61.
+- pass `walk-forward`: Beat the champion on 4 of 4 anchored folds. Most means more than half.
+- pass `drawdown`: Max drawdown train 100.00% → 51.06%, holdout 100.00% → 47.75%. No worse means less than or equal to the champion on both windows.
+- fail `deflated-sharpe`: Holdout daily Sharpe -0.0002 did not clear hurdle 0.0711 (z=-20.874, trials=21, variance=0.001369). The statistic is not a probability.
+- pass `neighbours`: 6 of 6 one-step neighbours beat the champion's holdout profit, which is a majority.
+
+Deflated Sharpe uses 21 trials. Daily Sharpe -0.0002, hurdle 0.0711, z=-20.874. The z statistic is not a probability and it is not a confidence.
+
+### Long-tape checks (not skeptic gates)
+
+Joined book starts when all three coins exist. Solana's own tape starts later than Bitcoin and Ethereum, so the earlier Bitcoin and Ethereum bars are kept in the per-coin audit and left out of the book. Missing means absent 15-minute slots between the first and last bar. Duplicate means the same timestamp stored twice. Costs stay 0.1% taker and 5 bps slippage, doubled only in the fee stress. Seed 20261114.
+
+Regime is declared up front and is not a skeptic gate. A trade is bull when Bitcoin's close on the entry bar is more than 5% above its close 1,920 bars earlier (20 days of 15-minute bars), bear when it is more than 5% below, and sideways otherwise. Bars before that lookback count as sideways.
+
+A yearly book starts flat on the first 15-minute bar of that UTC year inside the sample and ends on the last. A year with at least 1,920 bars is counted. Beating V-Pro on that year is a yearly win. The skeptic still uses its own four anchored folds. The yearly split does not replace them.
+
+Yearly wins: candidate 7 of 7, volume 2.0× variant 7 of 7.
+Fee stress at 0.20% taker and 10 bps slippage: train -$2,468.19, holdout -$5,865.43, holdout max drawdown 71.84%.
+Shuffled-entry control, 1000 draws, seed 20261114: 19 reached the book's holdout profit (1.9%), and 0 reached the same open-to-open scoring of the real entries (0.0%). Median simulated profit -$4,932.00.
+
+Each holdout trade keeps its coin, its side, and how many bars it was open. The entry bar is redrawn inside the holdout so that one coin's trades do not overlap. Entry is that bar's open. Exit is the open that many bars later, or the same bar's close when the trade did not last a full bar. The same costs apply. A draw matches the candidate when its timing profit is at least the candidate's own timing profit. This is not the book's stop-to-stop profit, and it is not a skeptic gate.
+
+## Cycle 29 — 15m — REJECT — Livermore 3-step, 4h EMA direction, long tape, volume 2×
+
+- At: 2026-11-14T11:03:46.819Z
+- Commit: `3120af684560798cdf86a0aa8189b676cdd1a360`
+- Seed: 20261114
+- Data: https://www.okx.com/api/v5/market/history-candles?bar=15m (long tape, fetched 2026-11-14T10:58:56.355Z). 214659 bars, 2020-09-30T10:00:00.000Z → 2026-11-14T10:30:00.000Z. Hash `ad6835c4a0b6cc0c9747e8b07c7266c51670cdeb715ad23e663115f24aa71619`.
+- Binance probe: HTTP 451, not used.
+- Champion: V-Pro 34/9, EMA 20/30, short-skip EMA 20, volume off (`f17c0e57977215b66ff31083e7d5118fdb0be734adb18eba43dc06d262cad753`).
+- Experiment: Livermore 3-step, 4h EMA direction, long tape, volume 2× (`e5d531260e6e189fd5dfa18af14b87c83b74cf41669384f962e3002457fcd06f`).
+
+### Why this experiment
+
+- Same Livermore rule as the short-tape candidate: 15-minute entries, EMA 50 direction from closed 4-hour bars, 20-bar pivot, confirmation on the next close.
+- The tape is the longer OKX public 15-minute history. The short tape file was not overwritten.
+- Joined range 2020-09-30T10:00:00.000Z → 2026-11-14T10:30:00.000Z, 214659 bars, sha256 ad6835c4a0b6cc0c9747e8b07c7266c51670cdeb715ad23e663115f24aa71619.
+- Joined missing slots 0, joined duplicate timestamps 0.
+- Bitcoin and Ethereum history begins before Solana. The book uses only timestamps present on all three.
+- Train is the first 60% after 384 warmup bars. Holdout is the rest. Those timestamps are frozen in the long-tape file.
+- Fees are 0.1% taker plus 5 bps slippage on entry and exit. The skeptic's gates are unchanged. Nothing is applied to the desk.
+- Volume multiplier 1.5 → 2 on the same long tape and the same 4-hour direction. The neighbour list is the candidate's declared neighbourhood (pivot 15/25, EMA 40/60, volume 1.25/1.75), not a looser one.
+
+### Holdout, each coin on its own $10,000, after costs
+
+| Coin | Champion profit | Champion trades | Challenger profit | Challenger trades |
+| --- | ---: | ---: | ---: | ---: |
+| BTC/USD | -$9,999.94 | 3983 | -$2,373.69 | 220 |
+| ETH/USD | -$9,999.59 | 3938 | -$2,484.54 | 241 |
+| SOL/USD | -$9,999.89 | 3981 | -$2,010.27 | 249 |
+
+### Combined book
+
+| Window | Champion profit | Challenger profit | Champion max DD | Challenger max DD | Champion daily Sharpe | Challenger daily Sharpe |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| train | -$10,000.00 | $20,106.73 | 100.00% | 51.60% | -0.0267 | 0.0047 |
+| holdout | -$9,999.83 | -$1,473.86 | 100.00% | 49.66% | -0.0531 | -0.0005 |
+
+Buy and hold on the holdout, equal weight, no costs: -$3,585.61.
+
+Bootstrap 2.5 to 97.5 percent of holdout profit, block resample of daily returns, seed 20261114: champion -$9,999.94 to -$9,999.39; challenger -$6,321.96 to $12,146.52.
+
+Walk-forward folds (anchored, scored flat at each fold start):
+
+- 2022-08-05 → 2023-01-19: champion -$9,124.18 (2292 trades), challenger $2,575.34 (114 trades).
+- 2023-01-19 → 2023-07-05: champion -$8,326.35 (2189 trades), challenger -$646.88 (129 trades).
+- 2023-07-05 → 2023-12-20: champion -$8,894.29 (2317 trades), challenger $3,349.26 (122 trades).
+- 2023-12-20 → 2024-06-04: champion -$9,019.14 (2332 trades), challenger -$1,809.09 (132 trades).
+
+Full-sample trades: BTC/USD 10079 → 551, ETH/USD 9935 → 584, SOL/USD 9897 → 564.
+
+Challenger holdout by BTC regime at the entry signal (bull above +5% over 20 days, bear below −5%):
+
+- bull: 193 trades, profit $1,646.74, mean trade 0.24%.
+- bear: 182 trades, profit -$3,377.48, mean trade -0.61%.
+- sideways: 335 trades, profit $256.87, mean trade 0.11%.
+
+### Verdict
+
+Rejected. Failed gates: deflated-sharpe. Holdout buy-and-hold was -$3,585.61.
+
+- pass `trades`: Each coin closed at least 30 trades on the full sample (BTC/USD 551 (champion 10079), ETH/USD 584 (champion 9935), SOL/USD 564 (champion 9897)).
+- pass `train`: Train profit -$10,000.00 → $20,106.73.
+- pass `holdout`: Holdout profit -$9,999.83 → -$1,473.86. Buy and hold on that window was -$3,585.61.
+- pass `walk-forward`: Beat the champion on 4 of 4 anchored folds. Most means more than half.
+- pass `drawdown`: Max drawdown train 100.00% → 51.60%, holdout 100.00% → 49.66%. No worse means less than or equal to the champion on both windows.
+- fail `deflated-sharpe`: Holdout daily Sharpe -0.0005 did not clear hurdle 0.0730 (z=-21.524, trials=22, variance=0.001412). The statistic is not a probability.
+- pass `neighbours`: 6 of 6 one-step neighbours beat the champion's holdout profit, which is a majority.
+
+Deflated Sharpe uses 22 trials. Daily Sharpe -0.0005, hurdle 0.0730, z=-21.524. The z statistic is not a probability and it is not a confidence.
+
