@@ -186,6 +186,30 @@ export function markdownSection(row: LedgerRow): string {
     );
     lines.push("");
   }
+  if (row.study) {
+    lines.push("### Long-tape checks (not skeptic gates)");
+    lines.push("");
+    lines.push(row.study.note);
+    lines.push("");
+    lines.push(row.study.regimeDefinition);
+    lines.push("");
+    lines.push(row.study.yearlyDefinition);
+    lines.push("");
+    lines.push(
+      `Yearly wins: candidate ${row.study.yearlyWins.candidate} of ${row.study.yearlyWins.countedYears}, volume 2.0× variant ${row.study.yearlyWins.variant} of ${row.study.yearlyWins.countedYears}.`,
+    );
+    const stress = row.study.feeStress;
+    lines.push(
+      `Fee stress at ${(stress.fee * 100).toFixed(2)}% taker and ${(stress.slippage * 10000).toFixed(0)} bps slippage: train ${usd(stress.trainProfit)}, holdout ${usd(stress.holdoutProfit)}, holdout max drawdown ${pct(stress.holdoutMaxDd)}.`,
+    );
+    const luck = row.study.luck;
+    lines.push(
+      `Shuffled-entry control, ${luck.reps} draws, seed ${luck.seed}: ${luck.matchedBook} reached the book's holdout profit (${(luck.bookFraction * 100).toFixed(1)}%), and ${luck.matchedOrBeat} reached the same open-to-open scoring of the real entries (${(luck.fraction * 100).toFixed(1)}%). Median simulated profit ${usd(luck.median)}.`,
+    );
+    lines.push("");
+    lines.push(luck.definition);
+    lines.push("");
+  }
   return `${lines.join("\n")}\n`;
 }
 

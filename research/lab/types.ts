@@ -204,6 +204,52 @@ export type LedgerRow = {
   gates: Gate[];
   trialsCounted: number;
   deflated: DeflatedRecord | null;
+  /**
+   * Extra checks that are not skeptic gates. Present on the long-tape
+   * Livermore validation. The desk does not read this.
+   */
+  study?: LongTapeStudy;
+};
+
+export type LongTapeStudy = {
+  note: string;
+  coins: Record<string, { bars: number; duplicates: number; missing: number; start: string | null; end: string | null }>;
+  aligned: { bars: number; duplicates: number; missing: number; start: string | null; end: string | null };
+  regimeDefinition: string;
+  yearlyDefinition: string;
+  yearly: {
+    year: number;
+    bars: number;
+    counted: boolean;
+    baseline: number;
+    candidate: number;
+    variant: number;
+    candidateTrades: number;
+    candidateMaxDd: number;
+  }[];
+  yearlyWins: { candidate: number; variant: number; countedYears: number };
+  feeStress: {
+    fee: number;
+    slippage: number;
+    trainProfit: number;
+    holdoutProfit: number;
+    holdoutMaxDd: number;
+    fullTrades: Record<SymbolName, number>;
+  };
+  luck: {
+    reps: number;
+    seed: number;
+    bookHoldout: number;
+    actualTiming: number;
+    matchedOrBeat: number;
+    fraction: number;
+    matchedBook: number;
+    bookFraction: number;
+    median: number;
+    p975: number;
+    meanSkipped: number;
+    definition: string;
+  };
 };
 
 /** The slice of a ledger row the proposer is allowed to learn from. */
