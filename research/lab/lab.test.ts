@@ -157,6 +157,16 @@ describe("proposer", () => {
     assert.notEqual(configHash(BASELINE), configHash({ ...BASELINE, signalRule: "either" }));
   });
 
+  it("starts a 15-minute search at the V-Pro band, not at the signal-rule knobs", () => {
+    const next = propose([], silent, ["vproBand", "vproSignal", "emaFast", "emaSlow", "volumeThreshold", "volumeLookback"]);
+    assert.equal(next.kind, "experiment");
+    if (next.kind !== "experiment") return;
+    assert.equal(next.move.knob, "vproBand");
+    assert.equal(next.move.to, 40);
+    assert.equal(next.move.config.signalRule, "agree");
+    assert.equal(next.move.config.volumeThreshold, null);
+  });
+
   it("builds a one-variable baseline trial for either-trigger and for EMA 20/50", () => {
     const either = forcedFromBaseline("signalRule", "either", ["why"]);
     const slow = forcedFromBaseline("emaSlow", 50, ["why"]);
@@ -308,6 +318,22 @@ describe("bootstrap, folds, and merge", () => {
     const band = blockBootstrapProfit(Array.from({ length: 80 }, () => 0.001), 10_000, 20261114, 400, 10);
     assert.ok(band.low <= band.high);
     assert.ok(band.low > 0);
+  });
+
+  it("keeps a 15-minute split on the exact bar it was given", () => {
+    const bars = Array.from({ length: 20 }, (_, i) => ({
+      t: Date.parse("2024-11-14T00:00:00.000Z") + i * 900_000,
+      open: 1,
+      high: 1,
+      low: 1,
+      close: 1,
+      volume: 1,
+    }));
+    const series = { "BTC/USD": bars, "ETH/USD": bars, "SOL/USD": bars };
+    const split = splits(series, { trainStart: bars[4]!.t, holdoutStart: bars[12]!.t });
+    assert.equal(split.trainFrom, 4);
+    assert.equal(split.holdoutFrom, 12);
+    assert.equal(split.trainTo, 11);
   });
 
   it("builds four anchored folds that tile the later train window", () => {

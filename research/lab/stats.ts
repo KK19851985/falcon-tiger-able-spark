@@ -162,22 +162,22 @@ export function deflatedSharpe(input: {
   return { sharpe, hurdle, z, clears, trials, variance };
 }
 
-export function btcRegime(bars: Bar[], index: number): RegimeName {
-  if (index < REGIME_LOOKBACK) return "sideways";
-  const ret = bars[index]!.close / bars[index - REGIME_LOOKBACK]!.close - 1;
+export function btcRegime(bars: Bar[], index: number, lookback = REGIME_LOOKBACK): RegimeName {
+  if (index < lookback) return "sideways";
+  const ret = bars[index]!.close / bars[index - lookback]!.close - 1;
   if (ret > REGIME_BAND) return "bull";
   if (ret < -REGIME_BAND) return "bear";
   return "sideways";
 }
 
-export function regimeBreakdown(btc: Bar[], fills: Fill[]): Record<RegimeName, RegimeStat> {
+export function regimeBreakdown(btc: Bar[], fills: Fill[], lookback = REGIME_LOOKBACK): Record<RegimeName, RegimeStat> {
   const buckets: Record<RegimeName, { trades: number; wins: number; pnl: number; ret: number }> = {
     bull: { trades: 0, wins: 0, pnl: 0, ret: 0 },
     bear: { trades: 0, wins: 0, pnl: 0, ret: 0 },
     sideways: { trades: 0, wins: 0, pnl: 0, ret: 0 },
   };
   for (const fill of fills) {
-    const bucket = buckets[btcRegime(btc, fill.signalIndex)];
+    const bucket = buckets[btcRegime(btc, fill.signalIndex, lookback)];
     bucket.trades += 1;
     bucket.pnl += fill.pnl;
     bucket.ret += fill.ret;

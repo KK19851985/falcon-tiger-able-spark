@@ -35,6 +35,16 @@ export const KNOB_ORDER: readonly Knob[] = [
   "signalRule",
 ];
 
+/** Knobs the 15-minute search is allowed to touch. Signal-rule experiments stay on the daily track. */
+export const FIFTEEN_KNOBS: readonly Knob[] = [
+  "vproBand",
+  "vproSignal",
+  "emaFast",
+  "emaSlow",
+  "volumeThreshold",
+  "volumeLookback",
+];
+
 export const KNOB_LABEL: Record<Knob, string> = {
   vproBand: "V-Pro band",
   vproSignal: "V-Pro signal",

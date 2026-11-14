@@ -32,7 +32,7 @@ type DirectionState = {
  * last result improved holdout profit is refined before a new knob is opened.
  * A config hash that is already in the ledger is never proposed again.
  */
-export function propose(ledger: ProposerView[], log: Logger = console.log): Proposal {
+export function propose(ledger: ProposerView[], log: Logger = console.log, knobs?: readonly Knob[]): Proposal {
   const say = (line: string) => log(`[proposer] ${line}`);
   const reasoning: string[] = [];
   const note = (line: string) => {
@@ -52,7 +52,7 @@ export function propose(ledger: ProposerView[], log: Logger = console.log): Prop
   } else {
     note("No direction has been rejected twice.");
   }
-  const moves = legalMoves(champion, state);
+  const moves = legalMoves(champion, state, knobs);
   const inactive = moves.filter((move) => move.knob === "volumeLookback" && champion.volumeThreshold == null);
   let pool = moves.filter((move) => !(move.knob === "volumeLookback" && champion.volumeThreshold == null));
   if (inactive.length && pool.length) {
@@ -146,9 +146,9 @@ function readState(ledger: ProposerView[]): DirectionState {
   return { fails, retired, heldUp, touched, tried };
 }
 
-function legalMoves(champion: Config, state: DirectionState): Move[] {
+function legalMoves(champion: Config, state: DirectionState, knobs?: readonly Knob[]): Move[] {
   const moves: Move[] = [];
-  for (const knob of KNOB_ORDER) {
+  for (const knob of knobs ?? KNOB_ORDER) {
     const grid = GRIDS[knob] as readonly (number | string | null)[];
     const current = champion[knob] as number | string | null;
     const index = grid.findIndex((value) => value === current);

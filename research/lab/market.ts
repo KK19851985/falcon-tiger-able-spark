@@ -134,6 +134,7 @@ function finish(
     appended,
     overlapMedianAbsPct: {},
     volumeScale: {},
+    timeframe: "1d",
   };
   if (merges) {
     for (const symbol of SYMBOLS) {
@@ -239,6 +240,63 @@ function readCache(): CacheFile | null {
 function writeCache(cache: CacheFile) {
   mkdirSync(path.dirname(PATHS.cache), { recursive: true });
   writeFileSync(PATHS.cache, `${JSON.stringify(cache)}\n`);
+}
+
+type FifteenFile = {
+  bar: string;
+  source: string;
+  fetchedAt: string;
+  trainStart: number;
+  holdoutStart: number;
+  hash: string;
+  symbols: Record<SymbolName, number[][]>;
+};
+
+export async function loadFifteen(): Promise<LoadedMarket> {
+  const file = path.join(path.dirname(PATHS.cache), "okx-15m.json");
+  if (!existsSync(file)) throw new Error("15-minute OKX tape is missing. Fetch it before running a 15m cycle.");
+  const raw = JSON.parse(readFileSync(file, "utf8")) as FifteenFile;
+  const series = {} as Series;
+  for (const symbol of SYMBOLS) {
+    const rows = raw.symbols[symbol];
+    if (!rows?.length) throw new Error(`15-minute tape is missing ${symbol}`);
+    series[symbol] = rows.map((row) => ({
+      t: row[0]!,
+      open: row[1]!,
+      high: row[2]!,
+      low: row[3]!,
+      close: row[4]!,
+      volume: row[5]!,
+    }));
+  }
+  const hash = seriesHash(series);
+  if (hash !== raw.hash) throw new Error("15-minute file does not match its stored hash.");
+  const btc = series["BTC/USD"];
+  const reasoning = [
+    "Binance public daily candles: HTTP 451, not used.",
+    `15-minute bars from ${raw.source}, saved ${raw.fetchedAt}. Confirmed candles only. www.okx.com, with my.okx.com as the fallback.`,
+    "Volume filter is off, the same as the published rule. V-Pro 34/9 and EMA 20/30 are unchanged.",
+    `Series ${new Date(btc[0]!.t).toISOString()} → ${new Date(btc[btc.length - 1]!.t).toISOString()}, ${btc.length} bars, sha256 ${hash}.`,
+  ];
+  return {
+    series,
+    reasoning,
+    manifest: {
+      source: raw.source,
+      binance: "HTTP 451, not used",
+      hash,
+      bars: btc.length,
+      start: new Date(btc[0]!.t).toISOString(),
+      end: new Date(btc[btc.length - 1]!.t).toISOString(),
+      partialReplaced: [],
+      appended: [],
+      overlapMedianAbsPct: {},
+      volumeScale: {},
+      timeframe: "15m",
+      trainStart: new Date(raw.trainStart).toISOString(),
+      holdoutStart: new Date(raw.holdoutStart).toISOString(),
+    },
+  };
 }
 
 function messageOf(error: unknown): string {

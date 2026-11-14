@@ -37,6 +37,9 @@ export type EvalOptions = {
   seed?: number;
   bootstrapReps?: number;
   log?: Logger;
+  timeframe?: "1d" | "15m";
+  /** Exact bar timestamps. Daily omits these and uses the calendar split. */
+  anchors?: { trainStart: number; holdoutStart: number };
 };
 
 export const LIVE_COSTS: CostModel = { fee: TAKER_FEE, slippage: SLIPPAGE };
@@ -46,10 +49,10 @@ export const LIVE_COSTS: CostModel = { fee: TAKER_FEE, slippage: SLIPPAGE };
  * precedes 2026-02-25, which is how fund.ts separates the fit from the check.
  * Bars appended after the bundle extend `holdoutTo` only.
  */
-export function splits(series: Series): Split {
+export function splits(series: Series, anchors?: { trainStart: number; holdoutStart: number }): Split {
   const bars = series["BTC/USD"];
-  const trainFrom = indexOfDay(bars, TRAIN_START);
-  const holdoutFrom = indexOfDay(bars, HOLDOUT_START);
+  const trainFrom = anchors ? indexOfStamp(bars, anchors.trainStart) : indexOfDay(bars, TRAIN_START);
+  const holdoutFrom = anchors ? indexOfStamp(bars, anchors.holdoutStart) : indexOfDay(bars, HOLDOUT_START);
   return {
     trainFrom,
     trainTo: holdoutFrom - 1,
@@ -79,13 +82,14 @@ export function scoreConfig(series: Series, config: Config, options: EvalOptions
   const costs = options.costs ?? LIVE_COSTS;
   const seed = options.seed ?? SEED;
   const reps = options.bootstrapReps ?? BOOTSTRAP_REPS;
-  const split = splits(series);
+  const split = splits(series, options.anchors);
+  const pace = paceFor(options.timeframe ?? "1d");
   const stances = Object.fromEntries(SYMBOLS.map((symbol) => [symbol, stanceFor(series[symbol], config)])) as Record<
     SymbolName,
     ReturnType<typeof stanceFor>
   >;
-  const train = windowMetrics(series, stances, split.trainFrom, split.trainTo, costs, seed, reps);
-  const holdout = windowMetrics(series, stances, split.holdoutFrom, split.holdoutTo, costs, seed, reps);
+  const train = windowMetrics(series, stances, split.trainFrom, split.trainTo, costs, seed, reps, pace);
+  const holdout = windowMetrics(series, stances, split.holdoutFrom, split.holdoutTo, costs, seed, reps, pace);
   const full = runBook(series, stances, split.trainFrom, split.holdoutTo, costs);
   const fullTrades = emptyCoins();
   for (const fill of full.fills) fullTrades[fill.symbol] += 1;
@@ -104,8 +108,13 @@ export function scoreConfig(series: Series, config: Config, options: EvalOptions
   return { train, holdout, fullTrades, folds };
 }
 
-export function holdoutProfit(series: Series, config: Config, costs: CostModel = LIVE_COSTS): number {
-  const split = splits(series);
+export function holdoutProfit(
+  series: Series,
+  config: Config,
+  costs: CostModel = LIVE_COSTS,
+  anchors?: { trainStart: number; holdoutStart: number },
+): number {
+  const split = splits(series, anchors);
   const stances = Object.fromEntries(SYMBOLS.map((symbol) => [symbol, stanceFor(series[symbol], config)])) as Record<
     SymbolName,
     ReturnType<typeof stanceFor>
@@ -115,14 +124,18 @@ export function holdoutProfit(series: Series, config: Config, costs: CostModel =
 
 export function evaluatePair(series: Series, champion: Config, challenger: Config, options: EvalOptions = {}) {
   const costs = options.costs ?? LIVE_COSTS;
-  const split = splits(series);
+  const split = splits(series, options.anchors);
   const days = series["BTC/USD"];
   const say = (line: string) => options.log?.(`[tester] ${line}`);
+  const frame = options.timeframe === "15m" ? "15-minute" : "daily";
+  say(`Timeframe: ${frame}.`);
   say(
-    `Costs are a ${(costs.fee * 100).toFixed(2)}% taker fee and ${(costs.slippage * 10000).toFixed(1)} bps of slippage, both charged on the entry and the exit.`,
+    `Costs are a ${(costs.fee * 100).toFixed(2)}% taker fee and ${(costs.slippage * 10000).toFixed(1)} bps of slippage, both charged on the entry and the exit. A busier chart pays that cost on every fill. More trades are not, by themselves, a better result.`,
   );
+  const stamp = (t: number) =>
+    options.timeframe === "15m" ? new Date(t).toISOString().slice(0, 16).replace("T", " ") : day(t);
   say(
-    `Train signals ${day(days[split.trainFrom]!.t)} through the bar before ${day(days[split.trainTo]!.t)}. Holdout signals start ${day(days[split.holdoutFrom]!.t)} and the book is marked through ${day(days[days.length - 1]!.t)}.`,
+    `Train signals ${stamp(days[split.trainFrom]!.t)} through the bar before ${stamp(days[split.trainTo]!.t)}. Holdout signals start ${stamp(days[split.holdoutFrom]!.t)} and the book is marked through ${stamp(days[days.length - 1]!.t)}.`,
   );
   say("Fills use the next bar's open. One position per coin. A flat or opposite stance closes that coin and does not reopen it on the same bar.");
   say(`Champion: ${describeConfig(champion)}.`);
@@ -154,10 +167,11 @@ function windowMetrics(
   costs: CostModel,
   seed: number,
   reps: number,
+  pace: Pace = paceFor("1d"),
 ): WindowMetrics {
   const run = runBook(series, stances, from, to, costs);
   const shape = moments(run.dailyReturns);
-  const band = blockBootstrapProfit(run.dailyReturns, START_EQUITY, seed, reps, BOOTSTRAP_BLOCK);
+  const band = blockBootstrapProfit(run.dailyReturns, START_EQUITY, seed, reps, pace.block);
   const gains = run.fills.filter((fill) => fill.pnl > 0).reduce((acc, fill) => acc + fill.pnl, 0);
   const pains = Math.abs(run.fills.filter((fill) => fill.pnl < 0).reduce((acc, fill) => acc + fill.pnl, 0));
   const perCoin = emptyCoinStats();
@@ -189,7 +203,7 @@ function windowMetrics(
     winRate: run.fills.length ? wins / run.fills.length : 0,
     maxDd: run.maxDd,
     sharpeDaily: shape.sharpe,
-    sharpeAnnual: shape.sharpe * Math.sqrt(365),
+    sharpeAnnual: shape.sharpe * Math.sqrt(pace.barsPerYear),
     profitFactor: pains === 0 ? null : gains / pains,
     meanTradeRet: run.fills.length ? run.fills.reduce((acc, fill) => acc + fill.ret, 0) / run.fills.length : 0,
     skew: shape.skew,
@@ -203,7 +217,7 @@ function windowMetrics(
     bootstrapLow: band.low,
     bootstrapHigh: band.high,
     perCoin,
-    regimes: regimeBreakdown(series["BTC/USD"], run.fills),
+    regimes: regimeBreakdown(series["BTC/USD"], run.fills, pace.regimeLookback),
   };
 }
 
@@ -217,6 +231,21 @@ function emptyCoinStats(): WindowMetrics["perCoin"] {
     "ETH/USD": { trades: 0, wins: 0, pnl: 0, isolatedProfit: 0 },
     "SOL/USD": { trades: 0, wins: 0, pnl: 0, isolatedProfit: 0 },
   };
+}
+
+type Pace = { barsPerYear: number; block: number; regimeLookback: number };
+
+function paceFor(timeframe: "1d" | "15m"): Pace {
+  if (timeframe === "15m") {
+    return { barsPerYear: 365 * 96, block: 96 * 10, regimeLookback: 96 * 20 };
+  }
+  return { barsPerYear: 365, block: BOOTSTRAP_BLOCK, regimeLookback: 20 };
+}
+
+function indexOfStamp(bars: { t: number }[], stamp: number): number {
+  const index = bars.findIndex((bar) => bar.t === stamp);
+  if (index < 0) throw new Error(`tape has no bar at ${new Date(stamp).toISOString()}`);
+  return index;
 }
 
 function indexOfDay(bars: { t: number }[], iso: string): number {

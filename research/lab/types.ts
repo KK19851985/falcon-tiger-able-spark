@@ -118,6 +118,8 @@ export type SideMetrics = {
   folds: FoldScore[];
 };
 
+export type Timeframe = "1d" | "15m";
+
 export type DataManifest = {
   source: string;
   binance: string;
@@ -125,6 +127,10 @@ export type DataManifest = {
   bars: number;
   start: string;
   end: string;
+  timeframe?: Timeframe;
+  /** Exact bar open time where 15-minute training signals start. Daily uses the fixed calendar split. */
+  trainStart?: string;
+  holdoutStart?: string;
   partialReplaced: string[];
   appended: string[];
   overlapMedianAbsPct: Partial<Record<SymbolName, number>>;
@@ -159,11 +165,16 @@ export type DeflatedRecord = {
   variance: number;
 };
 
+export function rowTimeframe(row: { timeframe?: Timeframe }): Timeframe {
+  return row.timeframe ?? "1d";
+}
+
 export type LedgerRow = {
   cycle: number;
   at: string;
   commit: string;
   seed: number;
+  timeframe?: Timeframe;
   data: DataManifest | null;
   champion: { config: Config; hash: string; label: string };
   experiment: ExperimentRecord | null;

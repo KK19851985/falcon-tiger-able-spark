@@ -4,24 +4,36 @@
  * Does not import the candidate back into the desk and does not place orders.
  */
 import { execSync } from "node:child_process";
-import { PINNED_DATA_HASH, SEED } from "./constants.ts";
+import { FIFTEEN_KNOBS, PINNED_DATA_HASH, SEED } from "./constants.ts";
 import { describeConfig } from "./format.ts";
-import { loadMarket } from "./market.ts";
+import { loadFifteen, loadMarket } from "./market.ts";
 import { PATHS, REPO_ROOT, isOutputPath } from "./paths.ts";
 import { adjacentMoves, forcedFromBaseline, propose, toProposerView } from "./proposer.ts";
 import { appendCycle, consoleSummary, readLedger } from "./recorder.ts";
 import { judge } from "./skeptic.ts";
-import { evaluatePair, holdoutProfit } from "./tester.ts";
-import type { Knob, LedgerRow } from "./types.ts";
+import { LIVE_COSTS, evaluatePair, holdoutProfit } from "./tester.ts";
+import { rowTimeframe, type Knob, type LedgerRow, type Timeframe } from "./types.ts";
 
 async function main() {
   const commit = codeCommit();
+  const argv = process.argv.slice(2);
+  const timeframe: Timeframe = argv.includes("--timeframe=15m") ? "15m" : "1d";
   const ledger = readLedger(PATHS.ledger);
-  const directed = parseDirected(process.argv.slice(2));
+  const track = ledger.filter((row) => rowTimeframe(row) === timeframe);
+  const directed = timeframe === "1d" ? parseDirected(argv) : null;
+  if (timeframe === "15m") {
+    console.log(
+      "[proposer] 15-minute track. Earlier daily trials do not choose the next knob and are not counted in this track's deflated-Sharpe hurdle.",
+    );
+  }
   const proposal = directed
     ? forcedFromBaseline(directed.knob, directed.value, directed.reasoning)
-    : propose(ledger.map(toProposerView));
-  const loaded = await loadMarket({ cacheOnly: directed != null });
+    : propose(track.map(toProposerView), console.log, timeframe === "15m" ? FIFTEEN_KNOBS : undefined);
+  const loaded = timeframe === "15m" ? await loadFifteen() : await loadMarket({ cacheOnly: directed != null });
+  const anchors =
+    loaded.manifest.trainStart && loaded.manifest.holdoutStart
+      ? { trainStart: Date.parse(loaded.manifest.trainStart), holdoutStart: Date.parse(loaded.manifest.holdoutStart) }
+      : undefined;
   if (directed && loaded.manifest.hash !== PINNED_DATA_HASH) {
     throw new Error(`Pinned tape hash ${loaded.manifest.hash} does not match ${PINNED_DATA_HASH}`);
   }
@@ -33,6 +45,7 @@ async function main() {
       at: new Date().toISOString(),
       commit,
       seed: SEED,
+      timeframe,
       data: loaded.manifest,
       champion: {
         config: proposal.champion,
@@ -45,7 +58,7 @@ async function main() {
       verdict: "EXHAUSTED",
       reason: proposal.reasoning.join(" ") || "Search space exhausted.",
       gates: [],
-      trialsCounted: ledger.filter((item) => item.experiment).length,
+      trialsCounted: track.filter((item) => item.experiment).length,
       deflated: null,
     };
     appendCycle(row);
@@ -54,13 +67,18 @@ async function main() {
     return;
   }
 
-  const scored = evaluatePair(loaded.series, proposal.champion, proposal.move.config, { log: console.log, seed: SEED });
+  const scored = evaluatePair(loaded.series, proposal.champion, proposal.move.config, {
+    log: console.log,
+    seed: SEED,
+    timeframe,
+    anchors,
+  });
   const neighbors = adjacentMoves(proposal.move.config).map((move) => ({
     label: move.label,
     hash: move.hash,
-    holdoutProfit: holdoutProfit(loaded.series, move.config),
+    holdoutProfit: holdoutProfit(loaded.series, move.config, LIVE_COSTS, anchors),
   }));
-  const prior = ledger
+  const prior = track
     .filter((item) => item.experiment && item.metrics)
     .map((item) => item.metrics!.challenger.holdout.sharpeDaily);
   const judgment = judge(
@@ -81,6 +99,7 @@ async function main() {
     at: new Date().toISOString(),
     commit,
     seed: SEED,
+    timeframe,
     data: loaded.manifest,
     champion: {
       config: proposal.champion,

@@ -62,6 +62,7 @@ export function appendCycle(row: LedgerRow, paths: RecorderPaths = PATHS, log: L
       cycle: row.cycle,
       at: row.at,
       commit: row.commit,
+      timeframe: row.timeframe ?? "1d",
       seed: row.seed,
       dataHash: row.data?.hash ?? null,
       label: row.experiment.label,
@@ -83,7 +84,8 @@ export function appendCycle(row: LedgerRow, paths: RecorderPaths = PATHS, log: L
 export function markdownSection(row: LedgerRow): string {
   const lines: string[] = [];
   const title = row.experiment?.label ?? "search exhausted";
-  lines.push(`## Cycle ${row.cycle} — ${row.verdict} — ${title}`);
+  const frame = row.timeframe ? ` — ${row.timeframe}` : "";
+  lines.push(`## Cycle ${row.cycle}${frame} — ${row.verdict} — ${title}`);
   lines.push("");
   lines.push(`- At: ${row.at}`);
   lines.push(`- Commit: \`${row.commit}\``);
@@ -189,7 +191,7 @@ export function markdownSection(row: LedgerRow): string {
 
 export function consoleSummary(row: LedgerRow): string {
   const lines: string[] = [];
-  lines.push(`Cycle ${row.cycle}  ${row.verdict}`);
+  lines.push(`Cycle ${row.cycle}  ${row.timeframe ?? "1d"}  ${row.verdict}`);
   lines.push(row.experiment ? `Experiment: ${row.experiment.label}` : "Experiment: none. The search is exhausted.");
   lines.push(row.reason);
   if (row.metrics) {
