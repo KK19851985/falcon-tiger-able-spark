@@ -25,7 +25,9 @@ export function describeConfig(config: Config): string {
       : `${config.volumeThreshold}× a ${config.volumeLookback}-bar average`;
   const rule =
     config.signalRule && config.signalRule !== "agree" ? `, signal ${config.signalRule}` : "";
-  return `V-Pro ${config.vproBand}/${config.vproSignal}, EMA ${config.emaFast}/${config.emaSlow}, short-skip ${skip}, volume ${volume}${rule}`;
+  const direction =
+    config.directionTf && config.directionTf !== "15m" ? `, direction ${config.directionTf} EMA` : "";
+  return `V-Pro ${config.vproBand}/${config.vproSignal}, EMA ${config.emaFast}/${config.emaSlow}, short-skip ${skip}, volume ${volume}${rule}${direction}`;
 }
 
 export function formatKnobValue(knob: Knob, value: number | string | null): string {

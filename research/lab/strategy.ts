@@ -1,4 +1,4 @@
-import type { Bar, Config, Side, SignalRule, Stance } from "./types.ts";
+import type { Bar, Config, DirectionTf, Side, SignalRule, Stance } from "./types.ts";
 import { ema, emaStance, volumeStance, vproStance } from "./indicators.ts";
 
 /**
@@ -22,7 +22,71 @@ export function stanceFor(bars: Bar[], config: Config): Stance[] {
     config.volumeThreshold == null
       ? null
       : volumeStance(bars, config.volumeLookback, config.volumeThreshold);
-  return applyFilters(bars, priceSignal(vpro, trend, config.signalRule ?? "agree"), volume, skip);
+  const directionTf = config.directionTf ?? "15m";
+  const price =
+    directionTf === "15m"
+      ? priceSignal(vpro, trend, config.signalRule ?? "agree")
+      : vproFilteredByDirection(vpro, higherTimeframeDirection(bars, directionTf, config.emaFast, config.emaSlow));
+  return applyFilters(bars, price, volume, skip);
+}
+
+const FIFTEEN_MS = 15 * 60 * 1000;
+
+/** Milliseconds in a closed higher-timeframe bar. Buckets are aligned to UTC. */
+export function directionDuration(tf: Exclude<DirectionTf, "15m">): number {
+  if (tf === "1h") return 60 * 60 * 1000;
+  if (tf === "4h") return 4 * 60 * 60 * 1000;
+  return 24 * 60 * 60 * 1000;
+}
+
+/**
+ * EMA 20/30 direction on a higher timeframe resampled from these 15-minute bars.
+ * A higher bar is visible only after its end time. The bar that is still forming
+ * is not used, so a later 15-minute print inside it cannot leak backward.
+ */
+export function higherTimeframeDirection(
+  bars: Bar[],
+  tf: Exclude<DirectionTf, "15m">,
+  fastLen = 20,
+  slowLen = 30,
+): Stance[] {
+  const dur = directionDuration(tf);
+  const buckets: { end: number; close: number }[] = [];
+  for (const bar of bars) {
+    const start = Math.floor(bar.t / dur) * dur;
+    const last = buckets[buckets.length - 1];
+    if (!last || last.end - dur !== start) buckets.push({ end: start + dur, close: bar.close });
+    else last.close = bar.close;
+  }
+  const fast = ema(
+    buckets.map((bucket) => bucket.close),
+    fastLen,
+  );
+  const slow = ema(
+    buckets.map((bucket) => bucket.close),
+    slowLen,
+  );
+  const direction: Stance[] = buckets.map((_, i) => {
+    if (fast[i]! > slow[i]!) return "LONG";
+    if (fast[i]! < slow[i]!) return "SHORT";
+    return "FLAT";
+  });
+  const out: Stance[] = new Array(bars.length).fill("FLAT");
+  let cursor = -1;
+  for (let i = 0; i < bars.length; i++) {
+    const knownAt = bars[i]!.t + FIFTEEN_MS;
+    while (cursor + 1 < buckets.length && buckets[cursor + 1]!.end <= knownAt) cursor++;
+    if (cursor >= 0) out[i] = direction[cursor]!;
+  }
+  return out;
+}
+
+function vproFilteredByDirection(vpro: Stance[], direction: Stance[]): Stance[] {
+  const out: Stance[] = new Array(vpro.length);
+  for (let i = 0; i < vpro.length; i++) {
+    out[i] = vpro[i] !== "FLAT" && vpro[i] === direction[i] ? vpro[i]! : "FLAT";
+  }
+  return out;
 }
 
 /**

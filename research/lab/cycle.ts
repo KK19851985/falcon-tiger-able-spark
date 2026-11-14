@@ -4,7 +4,7 @@
  * Does not import the candidate back into the desk and does not place orders.
  */
 import { execSync } from "node:child_process";
-import { FIFTEEN_KNOBS, PINNED_DATA_HASH, SEED } from "./constants.ts";
+import { FIFTEEN_DATA_HASH, FIFTEEN_KNOBS, PINNED_DATA_HASH, SEED } from "./constants.ts";
 import { describeConfig } from "./format.ts";
 import { loadFifteen, loadMarket } from "./market.ts";
 import { PATHS, REPO_ROOT, isOutputPath } from "./paths.ts";
@@ -20,7 +20,10 @@ async function main() {
   const timeframe: Timeframe = argv.includes("--timeframe=15m") ? "15m" : "1d";
   const ledger = readLedger(PATHS.ledger);
   const track = ledger.filter((row) => rowTimeframe(row) === timeframe);
-  const directed = timeframe === "1d" ? parseDirected(argv) : null;
+  const directed = parseDirected(argv);
+  if (directed?.knob === "directionTf" && timeframe !== "15m") {
+    throw new Error("The higher-timeframe direction test runs on the 15-minute book.");
+  }
   if (timeframe === "15m") {
     console.log(
       "[proposer] 15-minute track. Earlier daily trials do not choose the next knob and are not counted in this track's deflated-Sharpe hurdle.",
@@ -34,7 +37,10 @@ async function main() {
     loaded.manifest.trainStart && loaded.manifest.holdoutStart
       ? { trainStart: Date.parse(loaded.manifest.trainStart), holdoutStart: Date.parse(loaded.manifest.holdoutStart) }
       : undefined;
-  if (directed && loaded.manifest.hash !== PINNED_DATA_HASH) {
+  if (timeframe === "15m" && loaded.manifest.hash !== FIFTEEN_DATA_HASH) {
+    throw new Error(`15-minute tape hash ${loaded.manifest.hash} does not match ${FIFTEEN_DATA_HASH}`);
+  }
+  if (directed && timeframe === "1d" && loaded.manifest.hash !== PINNED_DATA_HASH) {
     throw new Error(`Pinned tape hash ${loaded.manifest.hash} does not match ${PINNED_DATA_HASH}`);
   }
   for (const line of loaded.reasoning) console.log(`[tester] ${line}`);
@@ -139,7 +145,8 @@ function parseDirected(argv: string[]): { knob: Knob; value: number | string; re
   const split = body.indexOf("=");
   const knob = body.slice(0, split) as Knob;
   const rawValue = body.slice(split + 1);
-  const value = rawValue === "either" || rawValue === "window3" || rawValue === "agree" ? rawValue : Number(rawValue);
+  const named = new Set(["either", "window3", "agree", "15m", "1h", "4h", "1d"]);
+  const value = named.has(rawValue) ? rawValue : Number(rawValue);
   if (typeof value === "number" && !Number.isFinite(value)) throw new Error(`Bad --set value ${raw}`);
   return { knob, value, reasoning: reasonsFor(knob, value) };
 }
@@ -148,7 +155,7 @@ function reasonsFor(knob: Knob, value: number | string): string[] {
   const common = [
     "Scored against the published baseline, V-Pro 34/9 and EMA 20/30, not against an earlier band trial.",
     "The skeptic is unchanged: 30 trades per coin, train, holdout, most walk-forward folds, drawdown, the deflated-Sharpe hurdle, and neighbour stability.",
-    "Fees stay on. Seed stays 20261114. The OKX tape is the pinned one from the first cycles.",
+    "Fees stay on: 0.1% taker and 5 bps slippage on the entry and the exit. Seed stays 20261114.",
     "This does not edit the desk.",
   ];
   if (knob === "signalRule" && value === "either") {
@@ -167,6 +174,15 @@ function reasonsFor(knob: Knob, value: number | string): string[] {
       "One variable: signal rule agree to window3.",
       "Assumption: this is stricter than the baseline. The baseline stays in while both latched stances agree, no matter how far apart the crosses were. Window3 allows a side only when the latest V-Pro cross and the latest EMA cross point the same way and are at most 3 bars apart.",
       "It is measured because Daniel asked for N=3, and it is still scored against the published baseline with the skeptic unchanged.",
+      ...common,
+    ];
+  }
+  if (knob === "directionTf") {
+    return [
+      `One variable: direction timeframe 15m to ${value}. Trades still fill on the 15-minute chart.`,
+      "Direction is the higher-timeframe EMA 20/30: long only while the fast average is above the slow average, short only while it is below. The higher bar is used only after it has closed.",
+      "The entry trigger stays the 15-minute V-Pro 34/9. The volume filter stays off. The 15-minute short-skip stays on. Fees and the seed stay the same.",
+      "Scored against the 15-minute baseline, not against another higher timeframe.",
       ...common,
     ];
   }

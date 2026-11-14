@@ -214,6 +214,9 @@ function withKnob(base: Config, knob: Knob, value: number | string | null): Conf
     case "signalRule":
       next.signalRule = value as Config["signalRule"];
       break;
+    case "directionTf":
+      next.directionTf = value as Config["directionTf"];
+      break;
   }
   return next;
 }

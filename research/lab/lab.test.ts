@@ -11,7 +11,7 @@ import { isPartialLast, mergeSymbol, type ExtCandle } from "./merge.ts";
 import { isOutputPath } from "./paths.ts";
 import { adjacentMoves, forcedFromBaseline, propose } from "./proposer.ts";
 import { appendCycle, readLedger } from "./recorder.ts";
-import { combineStances, priceSignal } from "./strategy.ts";
+import { combineStances, higherTimeframeDirection, priceSignal } from "./strategy.ts";
 import { judge } from "./skeptic.ts";
 import { blockBootstrapProfit, deflatedSharpe, normInv } from "./stats.ts";
 import { foldBounds, splits } from "./tester.ts";
@@ -244,6 +244,27 @@ describe("triggers", () => {
     assert.equal(priceSignal(vpro, near, "window3")[10], "LONG");
     assert.equal(priceSignal(vpro, far, "window3")[25], "FLAT");
     assert.equal(priceSignal(vpro, far, "agree")[25], "LONG");
+  });
+
+  it("does not let an unfinished higher-timeframe bar change an earlier decision", () => {
+    const step = 15 * 60 * 1000;
+    const start = Date.parse("2024-11-14T00:00:00.000Z");
+    const bars = Array.from({ length: 24 * 4 }, (_, i) => {
+      const close = 100 + i;
+      return { t: start + i * step, open: close, high: close + 1, low: close - 1, close, volume: 10 };
+    });
+    const full = higherTimeframeDirection(bars, "1h");
+    for (let i = 0; i < bars.length; i++) {
+      const truncated = higherTimeframeDirection(bars.slice(0, i + 1), "1h");
+      assert.equal(truncated[i], full[i], `lookahead at 15m bar ${i}`);
+    }
+    const day = higherTimeframeDirection(bars, "1d");
+    assert.equal(day[90], "FLAT");
+    const spikedDay = bars.map((bar, i) => (i === 95 ? { ...bar, close: 1 } : bar));
+    assert.equal(higherTimeframeDirection(spikedDay, "1d")[90], day[90]);
+    const crashedHour = bars.map((bar, i) => (i === 7 ? { ...bar, close: 1 } : bar));
+    assert.equal(higherTimeframeDirection(crashedHour, "1h")[6], full[6]);
+    assert.notEqual(higherTimeframeDirection(crashedHour, "1h")[7], full[7]);
   });
 
   it("matches the desk V-Pro stance on a random walk", async () => {

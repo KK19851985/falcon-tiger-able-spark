@@ -21,6 +21,9 @@ export type Series = Record<SymbolName, Bar[]>;
 
 export type SignalRule = "agree" | "either" | "window3";
 
+/** Where the EMA 20/30 direction is read. `15m` is the published same-chart rule. */
+export type DirectionTf = "15m" | "1h" | "4h" | "1d";
+
 export type Knob =
   | "vproBand"
   | "vproSignal"
@@ -29,7 +32,8 @@ export type Knob =
   | "shortSkip"
   | "volumeThreshold"
   | "volumeLookback"
-  | "signalRule";
+  | "signalRule"
+  | "directionTf";
 
 export type Direction = "up" | "down";
 
@@ -49,6 +53,11 @@ export type Config = {
    * Omitted on older ledger rows, which means `agree`.
    */
   signalRule: SignalRule;
+  /**
+   * Chart that supplies EMA direction. `15m` keeps the published same-chart
+   * agreement. Older ledger rows omit this, which means `15m`.
+   */
+  directionTf: DirectionTf;
 };
 
 export type Verdict = "ACCEPT" | "REJECT" | "INSUFFICIENT" | "EXHAUSTED";

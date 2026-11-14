@@ -10,6 +10,7 @@ export const BASELINE: Config = {
   volumeLookback: 20,
   volumeThreshold: null,
   signalRule: "agree",
+  directionTf: "15m",
 };
 
 export const GRIDS: { [K in Knob]: readonly (Config[K])[] } = {
@@ -21,6 +22,7 @@ export const GRIDS: { [K in Knob]: readonly (Config[K])[] } = {
   volumeLookback: [10, 20, 30, 50],
   volumeThreshold: [null, 0.8, 1, 1.2, 1.5, 2],
   signalRule: ["agree", "either", "window3"],
+  directionTf: ["15m", "1h", "4h", "1d"],
 };
 
 /** Untouched knobs are probed in this order, one adjacent step up first. */
@@ -54,11 +56,16 @@ export const KNOB_LABEL: Record<Knob, string> = {
   volumeThreshold: "volume threshold",
   volumeLookback: "volume lookback",
   signalRule: "signal rule",
+  directionTf: "direction timeframe",
 };
 
 /** Tape used by the first cycles. Directed cycles must keep this hash. */
 export const PINNED_DATA_HASH =
   "ea1894d6076c4e9305fd7c2b538af91c5deef84b08aa25921bbde1195806acbc";
+
+/** Confirmed OKX 15-minute tape the higher-timeframe bars are resampled from. */
+export const FIFTEEN_DATA_HASH =
+  "91991f53169d15ef73e8ed26ec8dd2213576b85f8acefd255c038c1aea292a93";
 
 /**
  * First signal bar and first holdout signal bar on the bundled daily tape.

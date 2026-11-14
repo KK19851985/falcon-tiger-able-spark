@@ -21,6 +21,8 @@ export function configHash(config: Config): string {
   for (const key of KEYS) body[key] = config[key];
   const rule = config.signalRule ?? "agree";
   if (rule !== "agree") body.signalRule = rule;
+  const directionTf = config.directionTf ?? "15m";
+  if (directionTf !== "15m") body.directionTf = directionTf;
   return createHash("sha256").update(JSON.stringify(body)).digest("hex");
 }
 
