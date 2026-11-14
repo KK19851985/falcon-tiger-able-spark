@@ -9,9 +9,9 @@ import { configHash } from "./hash.ts";
 import { vproStance } from "./indicators.ts";
 import { isPartialLast, mergeSymbol, type ExtCandle } from "./merge.ts";
 import { isOutputPath } from "./paths.ts";
-import { adjacentMoves, propose } from "./proposer.ts";
+import { adjacentMoves, forcedFromBaseline, propose } from "./proposer.ts";
 import { appendCycle, readLedger } from "./recorder.ts";
-import { combineStances } from "./strategy.ts";
+import { combineStances, priceSignal } from "./strategy.ts";
 import { judge } from "./skeptic.ts";
 import { blockBootstrapProfit, deflatedSharpe, normInv } from "./stats.ts";
 import { foldBounds, splits } from "./tester.ts";
@@ -37,6 +37,14 @@ function bar(index: number, open: number, close: number, volume = 10): Bar {
     close,
     volume,
   };
+}
+
+function fill(side: Stance, count: number): Stance[] {
+  return Array.from({ length: count }, () => side);
+}
+
+function changedKeys(config: Config): (keyof Config)[] {
+  return (Object.keys(BASELINE) as (keyof Config)[]).filter((key) => config[key] !== BASELINE[key]);
 }
 
 function view(
@@ -143,6 +151,26 @@ describe("proposer", () => {
     assert.equal(configHash(BASELINE), configHash({ ...BASELINE }));
     assert.notEqual(configHash(BASELINE), configHash({ ...BASELINE, volumeThreshold: 0.8 }));
     assert.equal(configHash(BASELINE).length, 64);
+    assert.equal(configHash(BASELINE).startsWith("f17c0e579772"), true);
+    const legacy = { ...BASELINE, signalRule: undefined } as unknown as Config;
+    assert.equal(configHash(legacy), configHash(BASELINE));
+    assert.notEqual(configHash(BASELINE), configHash({ ...BASELINE, signalRule: "either" }));
+  });
+
+  it("builds a one-variable baseline trial for either-trigger and for EMA 20/50", () => {
+    const either = forcedFromBaseline("signalRule", "either", ["why"]);
+    const slow = forcedFromBaseline("emaSlow", 50, ["why"]);
+    assert.equal(either.kind, "experiment");
+    assert.equal(slow.kind, "experiment");
+    if (either.kind !== "experiment" || slow.kind !== "experiment") return;
+    assert.deepEqual(changedKeys(either.move.config), ["signalRule"]);
+    assert.equal(either.move.config.signalRule, "either");
+    assert.equal(either.move.config.emaSlow, 30);
+    assert.deepEqual(changedKeys(slow.move.config), ["emaSlow"]);
+    assert.equal(slow.move.config.emaSlow, 50);
+    assert.equal(slow.move.config.signalRule, "agree");
+    assert.equal(either.championHash, configHash(BASELINE));
+    assert.equal(slow.championHash, configHash(BASELINE));
   });
 });
 
@@ -193,6 +221,19 @@ describe("triggers", () => {
     assert.deepEqual(volumeBlocks, ["FLAT", "FLAT"]);
     const volumeAgrees = combineStances(bars, ["LONG", "LONG"], ["LONG", "LONG"], ["LONG", "LONG"], [90, 90]);
     assert.deepEqual(volumeAgrees, ["LONG", "LONG"]);
+  });
+
+  it("lets either-trigger take one side, and keeps a 3-bar window tighter than agreement", () => {
+    const vpro = [...fill("FLAT", 5), ...fill("LONG", 30)];
+    const near = [...fill("FLAT", 7), ...fill("LONG", 28)];
+    const far = [...fill("FLAT", 20), ...fill("LONG", 15)];
+    const opposed = [...fill("SHORT", 35)];
+    assert.equal(priceSignal(vpro, near, "agree")[6], "FLAT");
+    assert.equal(priceSignal(vpro, near, "either")[6], "LONG");
+    assert.equal(priceSignal(vpro, opposed, "either")[10], "FLAT");
+    assert.equal(priceSignal(vpro, near, "window3")[10], "LONG");
+    assert.equal(priceSignal(vpro, far, "window3")[25], "FLAT");
+    assert.equal(priceSignal(vpro, far, "agree")[25], "LONG");
   });
 
   it("matches the desk V-Pro stance on a random walk", async () => {

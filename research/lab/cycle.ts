@@ -4,21 +4,27 @@
  * Does not import the candidate back into the desk and does not place orders.
  */
 import { execSync } from "node:child_process";
-import { SEED } from "./constants.ts";
+import { PINNED_DATA_HASH, SEED } from "./constants.ts";
 import { describeConfig } from "./format.ts";
 import { loadMarket } from "./market.ts";
 import { PATHS, REPO_ROOT, isOutputPath } from "./paths.ts";
-import { adjacentMoves, propose, toProposerView } from "./proposer.ts";
+import { adjacentMoves, forcedFromBaseline, propose, toProposerView } from "./proposer.ts";
 import { appendCycle, consoleSummary, readLedger } from "./recorder.ts";
 import { judge } from "./skeptic.ts";
 import { evaluatePair, holdoutProfit } from "./tester.ts";
-import type { LedgerRow } from "./types.ts";
+import type { Knob, LedgerRow } from "./types.ts";
 
 async function main() {
   const commit = codeCommit();
   const ledger = readLedger(PATHS.ledger);
-  const proposal = propose(ledger.map(toProposerView));
-  const loaded = await loadMarket();
+  const directed = parseDirected(process.argv.slice(2));
+  const proposal = directed
+    ? forcedFromBaseline(directed.knob, directed.value, directed.reasoning)
+    : propose(ledger.map(toProposerView));
+  const loaded = await loadMarket({ cacheOnly: directed != null });
+  if (directed && loaded.manifest.hash !== PINNED_DATA_HASH) {
+    throw new Error(`Pinned tape hash ${loaded.manifest.hash} does not match ${PINNED_DATA_HASH}`);
+  }
   for (const line of loaded.reasoning) console.log(`[tester] ${line}`);
 
   if (proposal.kind === "exhausted") {
@@ -102,6 +108,57 @@ async function main() {
   appendCycle(row);
   console.log("");
   console.log(consoleSummary(row));
+}
+
+function parseDirected(argv: string[]): { knob: Knob; value: number | string; reasoning: string[] } | null {
+  const raw = argv.find((arg) => arg.startsWith("--set="));
+  if (!raw) return null;
+  if (!argv.includes("--against-baseline")) {
+    throw new Error("A directed cycle must be scored against the published baseline.");
+  }
+  const body = raw.slice("--set=".length);
+  const split = body.indexOf("=");
+  const knob = body.slice(0, split) as Knob;
+  const rawValue = body.slice(split + 1);
+  const value = rawValue === "either" || rawValue === "window3" || rawValue === "agree" ? rawValue : Number(rawValue);
+  if (typeof value === "number" && !Number.isFinite(value)) throw new Error(`Bad --set value ${raw}`);
+  return { knob, value, reasoning: reasonsFor(knob, value) };
+}
+
+function reasonsFor(knob: Knob, value: number | string): string[] {
+  const common = [
+    "Scored against the published baseline, V-Pro 34/9 and EMA 20/30, not against an earlier band trial.",
+    "The skeptic is unchanged: 30 trades per coin, train, holdout, most walk-forward folds, drawdown, the deflated-Sharpe hurdle, and neighbour stability.",
+    "Fees stay on. Seed stays 20261114. The OKX tape is the pinned one from the first cycles.",
+    "This does not edit the desk.",
+  ];
+  if (knob === "signalRule" && value === "either") {
+    return [
+      "Daniel asked to lower the buy and sell requirement so each coin can reach 30 trades.",
+      "Assumption: the baseline already enters when the latched V-Pro stance and the latched EMA 20/30 stance agree. It does not require both crosses on the same bar, so a 'state instead of cross' trial would not change a fill and is not run as its own config.",
+      "Assumption: the volume threshold is already off. The next grid step turns that filter on, which raises the bar, so it is not run.",
+      "Assumption: requiring the two latest crosses to land within 3 bars is tighter than the baseline latch. That window is a later cycle, still against this baseline.",
+      "This cycle changes one variable: the signal rule from agree to either. A side is taken when V-Pro or the EMA has that side and the other is not opposite.",
+      "EMA 20/50 is queued after the signal-rule trials. It is a separate one-variable change.",
+      ...common,
+    ];
+  }
+  if (knob === "signalRule" && value === "window3") {
+    return [
+      "One variable: signal rule agree to window3.",
+      "Assumption: this is stricter than the baseline. The baseline stays in while both latched stances agree, no matter how far apart the crosses were. Window3 allows a side only when the latest V-Pro cross and the latest EMA cross point the same way and are at most 3 bars apart.",
+      "It is measured because Daniel asked for N=3, and it is still scored against the published baseline with the skeptic unchanged.",
+      ...common,
+    ];
+  }
+  if (knob === "emaSlow" && value === 50) {
+    return [
+      "One variable: EMA slow 30 to 50. EMA fast stays 20. V-Pro stays 34/9. The signal rule stays agree. Volume stays off.",
+      "Queued after the signal-rule trials. Independent of them, and scored against the same published baseline.",
+      ...common,
+    ];
+  }
+  return [`Directed one-variable change: ${knob} to ${String(value)}.`, ...common];
 }
 
 function codeCommit(): string {

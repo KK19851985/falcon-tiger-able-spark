@@ -8,8 +8,8 @@ export type Move = {
   hash: string;
   knob: Knob;
   direction: Direction;
-  from: number | null;
-  to: number | null;
+  from: number | string | null;
+  to: number | string | null;
   distance: number;
   label: string;
 };
@@ -149,8 +149,8 @@ function readState(ledger: ProposerView[]): DirectionState {
 function legalMoves(champion: Config, state: DirectionState): Move[] {
   const moves: Move[] = [];
   for (const knob of KNOB_ORDER) {
-    const grid = GRIDS[knob] as readonly (number | null)[];
-    const current = champion[knob] as number | null;
+    const grid = GRIDS[knob] as readonly (number | string | null)[];
+    const current = champion[knob] as number | string | null;
     const index = grid.findIndex((value) => value === current);
     if (index < 0) throw new Error(`${knob} value ${String(current)} is not on the search grid`);
     for (let j = 0; j < grid.length; j++) {
@@ -187,7 +187,7 @@ function rank(move: Move, state: DirectionState, focus: string | null): number {
   return band * 1000 + move.distance * 100 + knobIndex * 2 + directionBit;
 }
 
-function withKnob(base: Config, knob: Knob, value: number | null): Config {
+function withKnob(base: Config, knob: Knob, value: number | string | null): Config {
   const next: Config = { ...base };
   switch (knob) {
     case "vproBand":
@@ -203,24 +203,59 @@ function withKnob(base: Config, knob: Knob, value: number | null): Config {
       next.emaSlow = value as number;
       break;
     case "shortSkip":
-      next.shortSkip = value;
+      next.shortSkip = value as number | null;
       break;
     case "volumeLookback":
       next.volumeLookback = value as number;
       break;
     case "volumeThreshold":
-      next.volumeThreshold = value;
+      next.volumeThreshold = value as number | null;
+      break;
+    case "signalRule":
+      next.signalRule = value as Config["signalRule"];
       break;
   }
   return next;
+}
+
+/** One knob changed from the published baseline. Used for a directed cycle. */
+export function forcedFromBaseline(knob: Knob, value: number | string | null, reasoning: string[]): Proposal {
+  const champion: Config = { ...BASELINE };
+  const grid = GRIDS[knob] as readonly (number | string | null)[];
+  const current = champion[knob] as number | string | null;
+  const index = grid.findIndex((item) => item === current);
+  const nextIndex = grid.findIndex((item) => item === value);
+  if (index < 0 || nextIndex < 0 || nextIndex === index) {
+    throw new Error(`${knob} cannot move from ${String(current)} to ${String(value)}`);
+  }
+  const next = withKnob(champion, knob, value);
+  const changed = (Object.keys(champion) as (keyof Config)[]).filter((key) => next[key] !== champion[key]);
+  if (changed.length !== 1 || changed[0] !== knob) throw new Error("a directed cycle must change exactly one variable");
+  const direction: Direction = nextIndex > index ? "up" : "down";
+  return {
+    kind: "experiment",
+    champion,
+    championHash: configHash(champion),
+    reasoning,
+    move: {
+      config: next,
+      hash: configHash(next),
+      knob,
+      direction,
+      from: current,
+      to: value,
+      distance: Math.abs(nextIndex - index),
+      label: describeMove(knob, current, value),
+    },
+  };
 }
 
 /** One-grid-step neighbours of a config, including the step back to where it came from. */
 export function adjacentMoves(config: Config): Move[] {
   const moves: Move[] = [];
   for (const knob of KNOB_ORDER) {
-    const grid = GRIDS[knob] as readonly (number | null)[];
-    const current = config[knob] as number | null;
+    const grid = GRIDS[knob] as readonly (number | string | null)[];
+    const current = config[knob] as number | string | null;
     const index = grid.findIndex((value) => value === current);
     for (const j of [index - 1, index + 1]) {
       if (j < 0 || j >= grid.length) continue;

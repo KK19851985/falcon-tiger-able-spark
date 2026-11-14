@@ -19,6 +19,8 @@ export type Bar = {
 
 export type Series = Record<SymbolName, Bar[]>;
 
+export type SignalRule = "agree" | "either" | "window3";
+
 export type Knob =
   | "vproBand"
   | "vproSignal"
@@ -26,7 +28,8 @@ export type Knob =
   | "emaSlow"
   | "shortSkip"
   | "volumeThreshold"
-  | "volumeLookback";
+  | "volumeLookback"
+  | "signalRule";
 
 export type Direction = "up" | "down";
 
@@ -41,6 +44,11 @@ export type Config = {
   volumeLookback: number;
   /** Long/short volume confirmation when volume / N-bar average is at least this. `null` turns it off. */
   volumeThreshold: number | null;
+  /**
+   * How the two price triggers combine. `agree` is the published rule.
+   * Omitted on older ledger rows, which means `agree`.
+   */
+  signalRule: SignalRule;
 };
 
 export type Verdict = "ACCEPT" | "REJECT" | "INSUFFICIENT" | "EXHAUSTED";
@@ -128,8 +136,8 @@ export type ExperimentRecord = {
   hash: string;
   knob: Knob;
   direction: Direction;
-  from: number | null;
-  to: number | null;
+  from: number | string | null;
+  to: number | string | null;
   label: string;
   reasoning: string[];
 };

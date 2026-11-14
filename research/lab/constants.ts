@@ -9,6 +9,7 @@ export const BASELINE: Config = {
   shortSkip: 20,
   volumeLookback: 20,
   volumeThreshold: null,
+  signalRule: "agree",
 };
 
 export const GRIDS: { [K in Knob]: readonly (Config[K])[] } = {
@@ -19,6 +20,7 @@ export const GRIDS: { [K in Knob]: readonly (Config[K])[] } = {
   shortSkip: [null, 10, 15, 20, 30, 50],
   volumeLookback: [10, 20, 30, 50],
   volumeThreshold: [null, 0.8, 1, 1.2, 1.5, 2],
+  signalRule: ["agree", "either", "window3"],
 };
 
 /** Untouched knobs are probed in this order, one adjacent step up first. */
@@ -30,6 +32,7 @@ export const KNOB_ORDER: readonly Knob[] = [
   "shortSkip",
   "volumeThreshold",
   "volumeLookback",
+  "signalRule",
 ];
 
 export const KNOB_LABEL: Record<Knob, string> = {
@@ -40,7 +43,12 @@ export const KNOB_LABEL: Record<Knob, string> = {
   shortSkip: "short-skip line",
   volumeThreshold: "volume threshold",
   volumeLookback: "volume lookback",
+  signalRule: "signal rule",
 };
+
+/** Tape used by the first cycles. Directed cycles must keep this hash. */
+export const PINNED_DATA_HASH =
+  "ea1894d6076c4e9305fd7c2b538af91c5deef84b08aa25921bbde1195806acbc";
 
 /**
  * First signal bar and first holdout signal bar on the bundled daily tape.

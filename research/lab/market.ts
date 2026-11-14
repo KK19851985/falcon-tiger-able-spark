@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import path from "node:path";
 import { PATHS } from "./paths.ts";
+import { PINNED_DATA_HASH } from "./constants.ts";
 import { seriesHash } from "./hash.ts";
 import { dayOf, mergeSymbol, type ExtCandle, type MergeResult } from "./merge.ts";
 import { SYMBOLS, type DataManifest, type Series, type SymbolName } from "./types.ts";
@@ -25,7 +26,9 @@ type CacheFile = {
   symbols: Record<SymbolName, ExtCandle[]>;
 };
 
-export async function loadMarket(now = Date.now()): Promise<LoadedMarket> {
+export async function loadMarket(options?: { cacheOnly?: boolean; now?: number }): Promise<LoadedMarket> {
+  const now = options?.now ?? Date.now();
+  if (options?.cacheOnly) return loadPinnedCache();
   const bundled = await loadBundled();
   const reasoning: string[] = [];
   const binanceNote = await probeBinance();
@@ -78,6 +81,33 @@ export async function loadMarket(now = Date.now()): Promise<LoadedMarket> {
   reasoning.push(`${origin}. ${SYMBOLS.map((symbol) => `${symbol} ${merges[symbol].reason}`).join(" ")}`);
   const venueLabel = extension.venue === "okx" ? "OKX 1Dutc" : "Binance spot 1d";
   return finish(series, merges, binanceNote, reasoning, origin.startsWith("reused") ? `cached ${venueLabel}` : venueLabel);
+}
+
+async function loadPinnedCache(): Promise<LoadedMarket> {
+  const bundled = await loadBundled();
+  const cached = readCache();
+  if (!cached) throw new Error("The saved OKX extension is missing, so the pinned tape cannot be rebuilt.");
+  const reasoning = [
+    "Binance public daily candles: HTTP 451, not used.",
+    `Pinned the saved ${cached.venue} extension from ${cached.fetchedAt} so this cycle uses the same tape as the earlier cycles.`,
+  ];
+  const merges = {} as Record<SymbolName, MergeResult>;
+  let rejected: SymbolName | null = null;
+  for (const symbol of SYMBOLS) {
+    merges[symbol] = mergeSymbol(bundled[symbol], cached.symbols[symbol] ?? []);
+    if (!merges[symbol].accepted) rejected = symbol;
+  }
+  if (rejected) {
+    throw new Error(`Pinned extension was rejected for ${rejected}: ${merges[rejected].reason}`);
+  }
+  const series = {} as Series;
+  for (const symbol of SYMBOLS) series[symbol] = merges[symbol].bars;
+  const venueLabel = cached.venue === "okx" ? "OKX 1Dutc" : "Binance spot 1d";
+  const loaded = finish(series, merges, "HTTP 451, not used", reasoning, `cached ${venueLabel}`);
+  if (loaded.manifest.hash !== PINNED_DATA_HASH) {
+    throw new Error(`Pinned tape hash ${loaded.manifest.hash} does not match ${PINNED_DATA_HASH}`);
+  }
+  return loaded;
 }
 
 function finish(

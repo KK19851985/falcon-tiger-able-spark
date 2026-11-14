@@ -23,15 +23,17 @@ export function describeConfig(config: Config): string {
     config.volumeThreshold == null
       ? "off"
       : `${config.volumeThreshold}× a ${config.volumeLookback}-bar average`;
-  return `V-Pro ${config.vproBand}/${config.vproSignal}, EMA ${config.emaFast}/${config.emaSlow}, short-skip ${skip}, volume ${volume}`;
+  const rule =
+    config.signalRule && config.signalRule !== "agree" ? `, signal ${config.signalRule}` : "";
+  return `V-Pro ${config.vproBand}/${config.vproSignal}, EMA ${config.emaFast}/${config.emaSlow}, short-skip ${skip}, volume ${volume}${rule}`;
 }
 
-export function formatKnobValue(knob: Knob, value: number | null): string {
+export function formatKnobValue(knob: Knob, value: number | string | null): string {
   if (value == null) return "off";
   if (knob === "volumeThreshold") return String(value);
   return String(value);
 }
 
-export function describeMove(knob: Knob, from: number | null, to: number | null): string {
+export function describeMove(knob: Knob, from: number | string | null, to: number | string | null): string {
   return `${KNOB_LABEL[knob]} ${formatKnobValue(knob, from)} → ${formatKnobValue(knob, to)}`;
 }

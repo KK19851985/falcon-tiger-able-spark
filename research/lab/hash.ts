@@ -12,10 +12,15 @@ const KEYS = [
   "vproSignal",
 ] as const satisfies readonly (keyof Config)[];
 
-/** Stable identity of a config. Two runs of the same settings always match. */
+/**
+ * Stable identity of a config. The published signal rule is omitted so a
+ * baseline config hashes the same way it did before that knob existed.
+ */
 export function configHash(config: Config): string {
-  const body: Record<string, number | null> = {};
+  const body: Record<string, number | string | null> = {};
   for (const key of KEYS) body[key] = config[key];
+  const rule = config.signalRule ?? "agree";
+  if (rule !== "agree") body.signalRule = rule;
   return createHash("sha256").update(JSON.stringify(body)).digest("hex");
 }
 
