@@ -1,4 +1,4 @@
-import { BASELINE, GRIDS, KNOB_ORDER } from "./constants.ts";
+import { BASELINE, GRIDS, KNOB_LABEL, KNOB_ORDER } from "./constants.ts";
 import { describeConfig, describeMove } from "./format.ts";
 import { configHash } from "./hash.ts";
 import type { Config, Direction, Knob, Logger, ProposerView } from "./types.ts";
@@ -69,9 +69,15 @@ export function propose(ledger: ProposerView[], log: Logger = console.log): Prop
   const focus = state.heldUp && !state.retired.has(state.heldUp) ? state.heldUp : null;
   const ranked = [...pool].sort((a, b) => rank(a, state, focus) - rank(b, state, focus) || a.hash.localeCompare(b.hash));
   const chosen = ranked[0]!;
-  if (focus && chosen.knob === focus.split(":")[0]) {
+  const focusKnob = focus?.split(":")[0];
+  const focusDirection = focus?.split(":")[1];
+  if (focus && chosen.knob === focusKnob && chosen.direction === focusDirection) {
     note(
       `${focus} improved holdout profit last time it was tried, so the next step stays on that knob and moves further that way before opening a new knob.`,
+    );
+  } else if (focus && chosen.knob === focusKnob) {
+    note(
+      `${focus} improved holdout profit, and there is no unused step further that way. The next experiment tries the other side of ${KNOB_LABEL[chosen.knob]} before opening a new knob.`,
     );
   } else if (!state.touched.has(chosen.knob)) {
     note(

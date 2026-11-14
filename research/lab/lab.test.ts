@@ -105,6 +105,20 @@ describe("proposer", () => {
     assert.equal(next.move.to, 50);
   });
 
+  it("tries the other side once a held-up direction has no further step", () => {
+    const ledger = [
+      view({ ...BASELINE, vproBand: 40 }, "up", "INSUFFICIENT", 100, 150),
+      view({ ...BASELINE, vproBand: 50 }, "up", "INSUFFICIENT", 100, 160),
+    ];
+    const next = propose(ledger, silent);
+    assert.equal(next.kind, "experiment");
+    if (next.kind !== "experiment") return;
+    assert.equal(next.move.knob, "vproBand");
+    assert.equal(next.move.direction, "down");
+    assert.equal(next.move.to, 30);
+    assert.match(next.reasoning.join(" "), /other side/);
+  });
+
   it("refines a direction that improved the holdout", () => {
     const tried = { ...BASELINE, vproBand: 40 };
     const next = propose([view(tried, "up", "REJECT", 100, 180)], silent);
