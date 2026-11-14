@@ -19,7 +19,9 @@ async function main() {
   const argv = process.argv.slice(2);
   const timeframe: Timeframe = argv.includes("--timeframe=15m") ? "15m" : "1d";
   const ledger = readLedger(PATHS.ledger);
-  const track = ledger.filter((row) => rowTimeframe(row) === timeframe);
+  const track = ledger.filter(
+    (row) => rowTimeframe(row) === timeframe && (row.strategy ?? "vpro") === "vpro",
+  );
   const directed = parseDirected(argv);
   if (directed?.knob === "directionTf" && timeframe !== "15m") {
     throw new Error("The higher-timeframe direction test runs on the 15-minute book.");

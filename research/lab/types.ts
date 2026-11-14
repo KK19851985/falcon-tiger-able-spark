@@ -184,6 +184,16 @@ export type LedgerRow = {
   commit: string;
   seed: number;
   timeframe?: Timeframe;
+  /** Omitted rows are the V-Pro search. Livermore rows are scored against that search, not mixed into it. */
+  strategy?: "vpro" | "livermore";
+  livermore?: {
+    maPeriod: number;
+    pivotLookback: number;
+    volLookback: number;
+    volMultiplier: number;
+    confirmBars: number;
+    direction: "same" | "4h";
+  };
   data: DataManifest | null;
   champion: { config: Config; hash: string; label: string };
   experiment: ExperimentRecord | null;
