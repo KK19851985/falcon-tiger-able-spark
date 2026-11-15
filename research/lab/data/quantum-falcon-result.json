@@ -1,0 +1,3820 @@
+{
+  "at": "2026-11-15T07:12:16.933Z",
+  "commit": "059b6764c3475ba0eb9da5e261e80496089b6966",
+  "seed": 20261114,
+  "capital": "10000 per coin, independent, summed. Not the ledger's shared 10000 book.",
+  "rankingRule": "On ETH and SOL, lab costs, higher holdout profit and a holdout drawdown that is not worse. Binance costs are a sensitivity. The skeptic can still refuse the winner.",
+  "pinned": {
+    "hash": "ea1894d6076c4e9305fd7c2b538af91c5deef84b08aa25921bbde1195806acbc",
+    "bars": 726,
+    "start": "2024-11-18",
+    "end": "2026-11-13",
+    "source": "bundled src/lib/desk/clocks.ts daily plus cached OKX 1Dutc"
+  },
+  "fifteen": {
+    "hash": "91991f53169d15ef73e8ed26ec8dd2213576b85f8acefd255c038c1aea292a93",
+    "sliceHash": "e852a2e0e021c7af31eb0b2aabcb6048663893b12da0b4a9f5516227a641bdf3",
+    "source": "https://www.okx.com/api/v5/market/history-candles?bar=15m"
+  },
+  "public": {
+    "venue": "okx-spot",
+    "source": "https://www.okx.com/api/v5/market/history-candles",
+    "fallback": "https://my.okx.com",
+    "binanceProbe": "fapi.binance.com HTTP 451; api.binance.com HTTP 451",
+    "fetchedAt": "2026-11-15T07:10:18.755Z",
+    "oldest": "2024-11-14T00:00:00.000Z",
+    "note": "Spot USDT candles. Confirmed OKX rows only. No API key. Binance was probed and not used when OKX answered, so these coins match the pinned 15-minute tape's venue.",
+    "hash": "faf2440aac3cf4e560984e5cc304393b0dbd73ed8aeedda827cf8d200f0d8754",
+    "bnbDaily": {
+      "bars": 726,
+      "missing": 0,
+      "duplicates": 0,
+      "start": "2024-11-18T00:00:00.000Z",
+      "end": "2026-11-13T00:00:00.000Z"
+    },
+    "xrpDaily": {
+      "bars": 726,
+      "missing": 0,
+      "duplicates": 0,
+      "start": "2024-11-18T00:00:00.000Z",
+      "end": "2026-11-13T00:00:00.000Z"
+    }
+  },
+  "coverage": {
+    "ETH/USD": {
+      "bars": 70120,
+      "missing": 0,
+      "duplicates": 0,
+      "start": "2024-11-14T00:00:00.000Z",
+      "end": "2026-11-14T09:45:00.000Z",
+      "days": {
+        "median": 0.00040463419506581166,
+        "max": 0.0038127653364120606,
+        "compared": 726,
+        "missing": 0,
+        "short": 0
+      }
+    },
+    "SOL/USD": {
+      "bars": 70120,
+      "missing": 0,
+      "duplicates": 0,
+      "start": "2024-11-14T00:00:00.000Z",
+      "end": "2026-11-14T09:45:00.000Z",
+      "days": {
+        "median": 0.00038611181904135705,
+        "max": 0.020259287158545636,
+        "compared": 726,
+        "missing": 0,
+        "short": 0
+      }
+    },
+    "BNB/USD": {
+      "bars": 70204,
+      "missing": 0,
+      "duplicates": 0,
+      "start": "2024-11-14T00:00:00.000Z",
+      "end": "2026-11-15T06:45:00.000Z",
+      "days": {
+        "median": 0,
+        "max": 0,
+        "compared": 726,
+        "missing": 0,
+        "short": 0
+      }
+    },
+    "XRP/USD": {
+      "bars": 70204,
+      "missing": 0,
+      "duplicates": 0,
+      "start": "2024-11-14T00:00:00.000Z",
+      "end": "2026-11-15T06:45:00.000Z",
+      "days": {
+        "median": 0,
+        "max": 0,
+        "compared": 726,
+        "missing": 0,
+        "short": 0
+      }
+    }
+  },
+  "sharedFalcon": {
+    "train": 5941.964595287727,
+    "holdout": 5522.777949316542,
+    "holdoutMaxDd": 0.20240428215762107,
+    "fullTrades": {
+      "BTC/USD": 28,
+      "ETH/USD": 25,
+      "SOL/USD": 24
+    }
+  },
+  "assumptions": [
+    "Long and short are both allowed. The published short-skip above the 20 EMA belongs to Falcon and is not applied here. The desk has no description of this bot.",
+    "A cross is the entry. The stance is not held. After a take-profit, stop, or failsafe, the coin stays flat until EMA 9 crosses EMA 21 again.",
+    "The cross is known at the daily close and fills at the next day's open. An opposite cross closes at that next open. The new side waits one more day, the same one-bar delay the desk uses when it will not reverse on the exit bar.",
+    "Take-profit is a resting limit at 0.5% from the fill. Stop-loss is a stop at 10% from the fill. Both are measured from the entry price, not from the signal close.",
+    "When a bar's range touches the target and a stop, the stop fills. That is the pessimistic path. A gap through a stop fills at the open. A gap through the take-profit still fills at the limit price.",
+    "The trailing stop is assumed at 1.5% from the best price since entry (the high for a long, the low for a short). It is active immediately, so it is tighter than the 10% stop from the first bar. It uses the extreme known before the current bar.",
+    "The spike guard is the specified 1% move. On a 15-minute bar, a long exits if the low reaches 1% under that bar's open, and a short exits if the high reaches 1% over that open. The fill is that 1% level, or the open if the bar opens through it.",
+    "EMA 9 reversal means the 15-minute close crosses the 15-minute EMA 9 against the position: a long exits when the close goes from at or above the EMA to below it, and a short does the opposite. It fills at the next 15-minute open. An EMA-slope flip was not used.",
+    "The volume-surge exit is the specified 3×. The average is the prior 20 fifteen-minute bars, the same lookback the desk uses for its volume rule, and the current bar is not inside that average. Any 3× bar exits, in either direction. It fills at the next 15-minute open. If the EMA reversal and the surge arm on the same close, the exit is counted as the EMA reversal.",
+    "Among stops touched in one bar, the one closest to the open in the adverse direction fills first. For a long that is the highest stop. For a short it is the lowest.",
+    "Each window starts flat and flattens at its last bar's close. A 15-minute failsafe cannot see a bar that has not closed. Funding uses the fill bar's open time, so a round trip inside the entry bar accrues none.",
+    "One times leverage is a fully funded cash return on that coin's own stake. There is no exchange liquidation engine and no shared margin."
+  ],
+  "settings": {
+    "full": {
+      "takeProfit": 0.005,
+      "stopLoss": 0.1,
+      "trail": 0.015,
+      "spike": 0.01,
+      "emaFail": 9,
+      "volumeMultiple": 3,
+      "volumeLookback": 20
+    },
+    "daily": {
+      "takeProfit": 0.005,
+      "stopLoss": 0.1,
+      "trail": null,
+      "spike": null,
+      "emaFail": null,
+      "volumeMultiple": null,
+      "volumeLookback": 20
+    }
+  },
+  "labRank": {
+    "winner": null,
+    "sentence": "Falcon made more money on the holdout. Quantum had the shallower holdout drawdown. The rule needs both, so it does not name a winner."
+  },
+  "binanceRank": {
+    "winner": null,
+    "sentence": "Falcon made more money on the holdout. Quantum had the shallower holdout drawdown. The rule needs both, so it does not name a winner."
+  },
+  "priorSharpes": 9,
+  "lab": {
+    "verdict": "INSUFFICIENT",
+    "reason": "Insufficient sample: Need 30 closed trades on each coin over the full sample. Got ETH/USD 18 (champion 25), SOL/USD 22 (champion 24). Other failed gates: train, holdout, walk-forward, deflated-sharpe, neighbours.",
+    "gates": [
+      {
+        "name": "trades",
+        "pass": false,
+        "detail": "Need 30 closed trades on each coin over the full sample. Got ETH/USD 18 (champion 25), SOL/USD 22 (champion 24)."
+      },
+      {
+        "name": "train",
+        "pass": false,
+        "detail": "Train profit $10,699.81 → -$723.26."
+      },
+      {
+        "name": "holdout",
+        "pass": false,
+        "detail": "Holdout profit $11,981.37 → -$780.02. Buy and hold on that window was -$1,734.93."
+      },
+      {
+        "name": "walk-forward",
+        "pass": false,
+        "detail": "Beat the champion on 2 of 4 anchored folds. Most means more than half."
+      },
+      {
+        "name": "drawdown",
+        "pass": true,
+        "detail": "Max drawdown train 39.29% → 3.90%, holdout 22.93% → 3.90%. No worse means less than or equal to the champion on both windows."
+      },
+      {
+        "name": "deflated-sharpe",
+        "pass": false,
+        "detail": "Holdout daily Sharpe -0.1958 did not clear hurdle 0.1456 (z=-11.162, trials=10, variance=0.008546). The statistic is not a probability."
+      },
+      {
+        "name": "neighbours",
+        "pass": false,
+        "detail": "0 of 4 one-step neighbours beat the champion's holdout profit. A majority is required, so a one-cell spike does not pass."
+      }
+    ],
+    "deflated": {
+      "sharpe": -0.19581084056407783,
+      "hurdle": 0.1455608922978273,
+      "z": -11.161817714891296,
+      "clears": false,
+      "trials": 10,
+      "variance": 0.008545743648115082
+    },
+    "trials": 10,
+    "neighbors": [
+      {
+        "label": "trail 1.5% → 1.0%",
+        "hash": "2e022e6e134f9e941911fa3d96feff7f51c0c4992089f8fdc4f8a4edca23ee77",
+        "holdoutProfit": -783.0829109316401,
+        "beatsChampion": false
+      },
+      {
+        "label": "trail 1.5% → 2.0%",
+        "hash": "72ccafd1d45bfdfaeb91c3c0c45b868156f587a07eddcfcc3438b32c3369b4a2",
+        "holdoutProfit": -763.1020801186205,
+        "beatsChampion": false
+      },
+      {
+        "label": "volume lookback 20 → 10",
+        "hash": "aface745534836549374fa883defc7e6027b018d52d0ef66b82b207b13612b5f",
+        "holdoutProfit": -778.959444303473,
+        "beatsChampion": false
+      },
+      {
+        "label": "volume lookback 20 → 30",
+        "hash": "9c1016b20d65dc461cce2f820a7e5493378a0208da963bdea06f1ddfc0862971",
+        "holdoutProfit": -668.8038562452493,
+        "beatsChampion": false
+      }
+    ]
+  },
+  "binance": {
+    "verdict": "INSUFFICIENT",
+    "reason": "Insufficient sample: Need 30 closed trades on each coin over the full sample. Got ETH/USD 18 (champion 25), SOL/USD 22 (champion 24). Other failed gates: train, holdout, walk-forward, deflated-sharpe, neighbours.",
+    "gates": [
+      {
+        "name": "trades",
+        "pass": false,
+        "detail": "Need 30 closed trades on each coin over the full sample. Got ETH/USD 18 (champion 25), SOL/USD 22 (champion 24)."
+      },
+      {
+        "name": "train",
+        "pass": false,
+        "detail": "Train profit $11,685.40 → -$222.40."
+      },
+      {
+        "name": "holdout",
+        "pass": false,
+        "detail": "Holdout profit $12,472.18 → -$468.17. Buy and hold on that window was -$1,734.93."
+      },
+      {
+        "name": "walk-forward",
+        "pass": false,
+        "detail": "Beat the champion on 2 of 4 anchored folds. Most means more than half."
+      },
+      {
+        "name": "drawdown",
+        "pass": true,
+        "detail": "Max drawdown train 39.04% → 2.45%, holdout 22.40% → 2.34%. No worse means less than or equal to the champion on both windows."
+      },
+      {
+        "name": "deflated-sharpe",
+        "pass": false,
+        "detail": "Holdout daily Sharpe -0.1475 did not clear hurdle 0.1224 (z=-7.862, trials=10, variance=0.006042). The statistic is not a probability."
+      },
+      {
+        "name": "neighbours",
+        "pass": false,
+        "detail": "0 of 4 one-step neighbours beat the champion's holdout profit. A majority is required, so a one-cell spike does not pass."
+      }
+    ],
+    "deflated": {
+      "sharpe": -0.14754075948752826,
+      "hurdle": 0.12239837386416072,
+      "z": -7.862329656643297,
+      "clears": false,
+      "trials": 10,
+      "variance": 0.006042431538514544
+    },
+    "trials": 10,
+    "neighbors": [
+      {
+        "label": "trail 1.5% → 1.0%",
+        "hash": "2e022e6e134f9e941911fa3d96feff7f51c0c4992089f8fdc4f8a4edca23ee77",
+        "holdoutProfit": -471.01729262330264,
+        "beatsChampion": false
+      },
+      {
+        "label": "trail 1.5% → 2.0%",
+        "hash": "72ccafd1d45bfdfaeb91c3c0c45b868156f587a07eddcfcc3438b32c3369b4a2",
+        "holdoutProfit": -451.01710124815145,
+        "beatsChampion": false
+      },
+      {
+        "label": "volume lookback 20 → 10",
+        "hash": "aface745534836549374fa883defc7e6027b018d52d0ef66b82b207b13612b5f",
+        "holdoutProfit": -467.11236519220256,
+        "beatsChampion": false
+      },
+      {
+        "label": "volume lookback 20 → 30",
+        "hash": "9c1016b20d65dc461cce2f820a7e5493378a0208da963bdea06f1ddfc0862971",
+        "holdoutProfit": -351.63030306468136,
+        "beatsChampion": false
+      }
+    ]
+  },
+  "books": {
+    "falconCommonLab": {
+      "name": "Falcon",
+      "coins": [
+        "ETH/USD",
+        "SOL/USD"
+      ],
+      "costName": "lab",
+      "train": {
+        "profit": 10699.81,
+        "maxDd": 0.39294165101107564,
+        "trades": 30,
+        "winRate": 0.43333333333333335,
+        "avgWin": 1877.2681053750925,
+        "avgLoss": -806.1575160570474,
+        "worst": {
+          "symbol": "ETH/USD",
+          "side": "LONG",
+          "pnl": -1767.1068628105718,
+          "ret": -0.15300351336472418,
+          "reason": "desk"
+        },
+        "longestLosingStreak": 5,
+        "exits": {
+          "tp": 0,
+          "sl": 0,
+          "trail": 0,
+          "spike": 0,
+          "ema9": 0,
+          "volume": 0,
+          "cross": 0,
+          "flatten": 0
+        },
+        "signalTies": 0,
+        "fallbackDays": 0,
+        "shortDays": 0,
+        "buyHold": -8943.25,
+        "coins": [
+          {
+            "symbol": "ETH/USD",
+            "profit": 5809.53,
+            "maxDd": 0.42929819471422176,
+            "trades": 16,
+            "wins": 6,
+            "winRate": 0.375,
+            "avgWin": 2370.1447506464265,
+            "avgLoss": -841.1337349586141,
+            "worst": {
+              "symbol": "ETH/USD",
+              "side": "LONG",
+              "pnl": -1767.1068628105718,
+              "ret": -0.15300351336472418,
+              "reason": "desk"
+            },
+            "longestLosingStreak": 4
+          },
+          {
+            "symbol": "SOL/USD",
+            "profit": 4890.28,
+            "maxDd": 0.48609753295094177,
+            "trades": 14,
+            "wins": 7,
+            "winRate": 0.5,
+            "avgWin": 1454.8024094282348,
+            "avgLoss": -756.1914890548088,
+            "worst": {
+              "symbol": "SOL/USD",
+              "side": "SHORT",
+              "pnl": -1441.300818103028,
+              "ret": -0.130415126590668,
+              "reason": "desk"
+            },
+            "longestLosingStreak": 2
+          }
+        ]
+      },
+      "holdout": {
+        "profit": 11981.37,
+        "maxDd": 0.22931251006228678,
+        "trades": 18,
+        "winRate": 0.5,
+        "avgWin": 1797.818360868759,
+        "avgLoss": -466.55478918173117,
+        "worst": {
+          "symbol": "SOL/USD",
+          "side": "LONG",
+          "pnl": -983.2312759995795,
+          "ret": -0.10059841098613664,
+          "reason": "desk"
+        },
+        "longestLosingStreak": 3,
+        "exits": {
+          "tp": 0,
+          "sl": 0,
+          "trail": 0,
+          "spike": 0,
+          "ema9": 0,
+          "volume": 0,
+          "cross": 0,
+          "flatten": 0
+        },
+        "signalTies": 0,
+        "fallbackDays": 0,
+        "shortDays": 0,
+        "buyHold": -1734.93,
+        "coins": [
+          {
+            "symbol": "ETH/USD",
+            "profit": 5743.72,
+            "maxDd": 0.21491386497942527,
+            "trades": 9,
+            "wins": 5,
+            "winRate": 0.5555555555555556,
+            "avgWin": 1519.9719990365952,
+            "avgLoss": -464.0348729709518,
+            "worst": {
+              "symbol": "ETH/USD",
+              "side": "SHORT",
+              "pnl": -978.9847277650329,
+              "ret": -0.0815681728385953,
+              "reason": "desk"
+            },
+            "longestLosingStreak": 2
+          },
+          {
+            "symbol": "SOL/USD",
+            "profit": 6237.65,
+            "maxDd": 0.2610442827378951,
+            "trades": 9,
+            "wins": 4,
+            "winRate": 0.4444444444444444,
+            "avgWin": 2145.126313158964,
+            "avgLoss": -468.5707221503547,
+            "worst": {
+              "symbol": "SOL/USD",
+              "side": "LONG",
+              "pnl": -983.2312759995795,
+              "ret": -0.10059841098613664,
+              "reason": "desk"
+            },
+            "longestLosingStreak": 3
+          }
+        ]
+      },
+      "full": {
+        "profit": 24031.39,
+        "maxDd": 0.39294165101107564,
+        "trades": 49,
+        "winRate": 0.4489795918367347,
+        "avgWin": 2048.485492366804,
+        "avgLoss": -779.0849206383612,
+        "worst": {
+          "symbol": "ETH/USD",
+          "side": "LONG",
+          "pnl": -1767.1068628105718,
+          "ret": -0.15300351336472418,
+          "reason": "desk"
+        },
+        "longestLosingStreak": 5,
+        "exits": {
+          "tp": 0,
+          "sl": 0,
+          "trail": 0,
+          "spike": 0,
+          "ema9": 0,
+          "volume": 0,
+          "cross": 0,
+          "flatten": 0
+        },
+        "signalTies": 0,
+        "fallbackDays": 0,
+        "shortDays": 0,
+        "buyHold": -8692.21,
+        "coins": [
+          {
+            "symbol": "ETH/USD",
+            "profit": 12400.17,
+            "maxDd": 0.42929819471422176,
+            "trades": 25,
+            "wins": 11,
+            "winRate": 0.44,
+            "avgWin": 2132.03830038346,
+            "avgLoss": -789.4466393725321,
+            "worst": {
+              "symbol": "ETH/USD",
+              "side": "LONG",
+              "pnl": -1767.1068628105718,
+              "ret": -0.15300351336472418,
+              "reason": "desk"
+            },
+            "longestLosingStreak": 4
+          },
+          {
+            "symbol": "SOL/USD",
+            "profit": 11631.22,
+            "maxDd": 0.48609753295094177,
+            "trades": 24,
+            "wins": 11,
+            "winRate": 0.4583333333333333,
+            "avgWin": 1964.9326843501474,
+            "avgLoss": -767.9261466169462,
+            "worst": {
+              "symbol": "SOL/USD",
+              "side": "SHORT",
+              "pnl": -1568.633572757827,
+              "ret": -0.10534616860897272,
+              "reason": "desk"
+            },
+            "longestLosingStreak": 4
+          }
+        ]
+      },
+      "folds": [
+        {
+          "from": "2025-08-16",
+          "to": "2025-10-03",
+          "profit": -1627.63,
+          "trades": 5,
+          "maxDd": 0.12568125230427066
+        },
+        {
+          "from": "2025-10-03",
+          "to": "2025-11-20",
+          "profit": 2384.19,
+          "trades": 6,
+          "maxDd": 0.2379648330831389
+        },
+        {
+          "from": "2025-11-20",
+          "to": "2026-01-07",
+          "profit": -1272.95,
+          "trades": 3,
+          "maxDd": 0.09724221798721214
+        },
+        {
+          "from": "2026-01-07",
+          "to": "2026-02-24",
+          "profit": 8839.43,
+          "trades": 4,
+          "maxDd": 0.13485537406313158
+        }
+      ],
+      "fullTrades": {
+        "ETH/USD": 25,
+        "SOL/USD": 24
+      }
+    },
+    "falconCommonBinance": {
+      "name": "Falcon",
+      "coins": [
+        "ETH/USD",
+        "SOL/USD"
+      ],
+      "costName": "binance-usdt-m",
+      "train": {
+        "profit": 11685.4,
+        "maxDd": 0.3904018504791343,
+        "trades": 30,
+        "winRate": 0.43333333333333335,
+        "avgWin": 1944.8104968705593,
+        "avgLoss": -799.8315945592028,
+        "worst": {
+          "symbol": "ETH/USD",
+          "side": "LONG",
+          "pnl": -1789.8825956440185,
+          "ret": -0.1518071881830237,
+          "reason": "desk"
+        },
+        "longestLosingStreak": 5,
+        "exits": {
+          "tp": 0,
+          "sl": 0,
+          "trail": 0,
+          "spike": 0,
+          "ema9": 0,
+          "volume": 0,
+          "cross": 0,
+          "flatten": 0
+        },
+        "signalTies": 0,
+        "fallbackDays": 0,
+        "shortDays": 0,
+        "buyHold": -8943.25,
+        "coins": [
+          {
+            "symbol": "ETH/USD",
+            "profit": 6359.87,
+            "maxDd": 0.42352826598254867,
+            "trades": 16,
+            "wins": 6,
+            "winRate": 0.375,
+            "avgWin": 2449.2059485742107,
+            "avgLoss": -833.5365777721723,
+            "worst": {
+              "symbol": "ETH/USD",
+              "side": "LONG",
+              "pnl": -1789.8825956440185,
+              "ret": -0.1518071881830237,
+              "reason": "desk"
+            },
+            "longestLosingStreak": 4
+          },
+          {
+            "symbol": "SOL/USD",
+            "profit": 5325.53,
+            "maxDd": 0.47771660179881664,
+            "trades": 14,
+            "wins": 7,
+            "winRate": 0.5,
+            "avgWin": 1512.4715382674299,
+            "avgLoss": -751.681618540675,
+            "worst": {
+              "symbol": "SOL/USD",
+              "side": "SHORT",
+              "pnl": -1427.6070477770797,
+              "ret": -0.12817356243820027,
+              "reason": "desk"
+            },
+            "longestLosingStreak": 2
+          }
+        ]
+      },
+      "holdout": {
+        "profit": 12472.18,
+        "maxDd": 0.22404149105798232,
+        "trades": 18,
+        "winRate": 0.5555555555555556,
+        "avgWin": 1652.2605444115648,
+        "avgLoss": -506.303099338274,
+        "worst": {
+          "symbol": "SOL/USD",
+          "side": "LONG",
+          "pnl": -997.4148207064827,
+          "ret": -0.10119713130200662,
+          "reason": "desk"
+        },
+        "longestLosingStreak": 3,
+        "exits": {
+          "tp": 0,
+          "sl": 0,
+          "trail": 0,
+          "spike": 0,
+          "ema9": 0,
+          "volume": 0,
+          "cross": 0,
+          "flatten": 0
+        },
+        "signalTies": 0,
+        "fallbackDays": 0,
+        "shortDays": 0,
+        "buyHold": -1734.93,
+        "coins": [
+          {
+            "symbol": "ETH/USD",
+            "profit": 5985.39,
+            "maxDd": 0.20757459312691715,
+            "trades": 9,
+            "wins": 6,
+            "winRate": 0.6666666666666666,
+            "avgWin": 1290.7944540981398,
+            "avgLoss": -586.4590555628147,
+            "worst": {
+              "symbol": "ETH/USD",
+              "side": "SHORT",
+              "pnl": -955.6172810700353,
+              "ret": -0.07902878027832852,
+              "reason": "desk"
+            },
+            "longestLosingStreak": 1
+          },
+          {
+            "symbol": "SOL/USD",
+            "profit": 6486.79,
+            "maxDd": 0.2587575866441768,
+            "trades": 9,
+            "wins": 4,
+            "winRate": 0.4444444444444444,
+            "avgWin": 2194.459679881703,
+            "avgLoss": -458.20952560354965,
+            "worst": {
+              "symbol": "SOL/USD",
+              "side": "LONG",
+              "pnl": -997.4148207064827,
+              "ret": -0.10119713130200662,
+              "reason": "desk"
+            },
+            "longestLosingStreak": 3
+          }
+        ]
+      },
+      "full": {
+        "profit": 26195.39,
+        "maxDd": 0.3904018504791343,
+        "trades": 49,
+        "winRate": 0.46938775510204084,
+        "avgWin": 2048.567253114091,
+        "avgLoss": -804.6792403992685,
+        "worst": {
+          "symbol": "ETH/USD",
+          "side": "LONG",
+          "pnl": -1789.8825956440185,
+          "ret": -0.1518071881830237,
+          "reason": "desk"
+        },
+        "longestLosingStreak": 5,
+        "exits": {
+          "tp": 0,
+          "sl": 0,
+          "trail": 0,
+          "spike": 0,
+          "ema9": 0,
+          "volume": 0,
+          "cross": 0,
+          "flatten": 0
+        },
+        "signalTies": 0,
+        "fallbackDays": 0,
+        "shortDays": 0,
+        "buyHold": -8692.21,
+        "coins": [
+          {
+            "symbol": "ETH/USD",
+            "profit": 13542.48,
+            "maxDd": 0.42352826598254867,
+            "trades": 25,
+            "wins": 12,
+            "winRate": 0.48,
+            "avgWin": 2039.0803360228156,
+            "avgLoss": -840.4990624583209,
+            "worst": {
+              "symbol": "ETH/USD",
+              "side": "LONG",
+              "pnl": -1789.8825956440185,
+              "ret": -0.1518071881830237,
+              "reason": "desk"
+            },
+            "longestLosingStreak": 4
+          },
+          {
+            "symbol": "SOL/USD",
+            "profit": 12652.91,
+            "maxDd": 0.47771660179881664,
+            "trades": 24,
+            "wins": 11,
+            "winRate": 0.4583333333333333,
+            "avgWin": 2058.916617213665,
+            "avgLoss": -768.859418340216,
+            "worst": {
+              "symbol": "SOL/USD",
+              "side": "SHORT",
+              "pnl": -1585.493414585974,
+              "ret": -0.10345439751305928,
+              "reason": "desk"
+            },
+            "longestLosingStreak": 4
+          }
+        ]
+      },
+      "folds": [
+        {
+          "from": "2025-08-16",
+          "to": "2025-10-03",
+          "profit": -1574.02,
+          "trades": 5,
+          "maxDd": 0.12433914911719249
+        },
+        {
+          "from": "2025-10-03",
+          "to": "2025-11-20",
+          "profit": 2582.29,
+          "trades": 6,
+          "maxDd": 0.23602995765452459
+        },
+        {
+          "from": "2025-11-20",
+          "to": "2026-01-07",
+          "profit": -1200.65,
+          "trades": 3,
+          "maxDd": 0.0972422179872121
+        },
+        {
+          "from": "2026-01-07",
+          "to": "2026-02-24",
+          "profit": 8969.07,
+          "trades": 4,
+          "maxDd": 0.13438418381637482
+        }
+      ],
+      "fullTrades": {
+        "ETH/USD": 25,
+        "SOL/USD": 24
+      }
+    },
+    "falconOwnLab": {
+      "name": "Falcon",
+      "coins": [
+        "BTC/USD",
+        "ETH/USD",
+        "SOL/USD"
+      ],
+      "costName": "lab",
+      "train": {
+        "profit": 12989.62,
+        "maxDd": 0.35425942910748187,
+        "trades": 47,
+        "winRate": 0.3829787234042553,
+        "avgWin": 1722.981543663028,
+        "avgLoss": -621.51901289222,
+        "worst": {
+          "symbol": "ETH/USD",
+          "side": "LONG",
+          "pnl": -1767.1068628105718,
+          "ret": -0.15300351336472418,
+          "reason": "desk"
+        },
+        "longestLosingStreak": 8,
+        "exits": {
+          "tp": 0,
+          "sl": 0,
+          "trail": 0,
+          "spike": 0,
+          "ema9": 0,
+          "volume": 0,
+          "cross": 0,
+          "flatten": 0
+        },
+        "signalTies": 0,
+        "fallbackDays": 0,
+        "shortDays": 0,
+        "buyHold": -12308.78,
+        "coins": [
+          {
+            "symbol": "BTC/USD",
+            "profit": 2289.81,
+            "maxDd": 0.30945811505562354,
+            "trades": 17,
+            "wins": 5,
+            "winRate": 0.29411764705882354,
+            "avgWin": 1321.8364832116608,
+            "avgLoss": -359.9478000753813,
+            "worst": {
+              "symbol": "BTC/USD",
+              "side": "LONG",
+              "pnl": -885.2615110532192,
+              "ret": -0.09664883412675196,
+              "reason": "desk"
+            },
+            "longestLosingStreak": 7
+          },
+          {
+            "symbol": "ETH/USD",
+            "profit": 5809.53,
+            "maxDd": 0.42929819471422176,
+            "trades": 16,
+            "wins": 6,
+            "winRate": 0.375,
+            "avgWin": 2370.1447506464265,
+            "avgLoss": -841.1337349586141,
+            "worst": {
+              "symbol": "ETH/USD",
+              "side": "LONG",
+              "pnl": -1767.1068628105718,
+              "ret": -0.15300351336472418,
+              "reason": "desk"
+            },
+            "longestLosingStreak": 4
+          },
+          {
+            "symbol": "SOL/USD",
+            "profit": 4890.28,
+            "maxDd": 0.48609753295094177,
+            "trades": 14,
+            "wins": 7,
+            "winRate": 0.5,
+            "avgWin": 1454.8024094282348,
+            "avgLoss": -756.1914890548088,
+            "worst": {
+              "symbol": "SOL/USD",
+              "side": "SHORT",
+              "pnl": -1441.300818103028,
+              "ret": -0.130415126590668,
+              "reason": "desk"
+            },
+            "longestLosingStreak": 2
+          }
+        ]
+      },
+      "holdout": {
+        "profit": 14882.5,
+        "maxDd": 0.18762294071293176,
+        "trades": 30,
+        "winRate": 0.5,
+        "avgWin": 1414.9951095697775,
+        "avgLoss": -422.82855178810206,
+        "worst": {
+          "symbol": "SOL/USD",
+          "side": "LONG",
+          "pnl": -983.2312759995795,
+          "ret": -0.10059841098613664,
+          "reason": "desk"
+        },
+        "longestLosingStreak": 5,
+        "exits": {
+          "tp": 0,
+          "sl": 0,
+          "trail": 0,
+          "spike": 0,
+          "ema9": 0,
+          "volume": 0,
+          "cross": 0,
+          "flatten": 0
+        },
+        "signalTies": 0,
+        "fallbackDays": 0,
+        "shortDays": 0,
+        "buyHold": -1686.02,
+        "coins": [
+          {
+            "symbol": "BTC/USD",
+            "profit": 2901.13,
+            "maxDd": 0.1576684145155626,
+            "trades": 12,
+            "wins": 6,
+            "winRate": 0.5,
+            "avgWin": 840.7602326213045,
+            "avgLoss": -357.2391956976583,
+            "worst": {
+              "symbol": "BTC/USD",
+              "side": "LONG",
+              "pnl": -645.7382706324115,
+              "ret": -0.05204662862221443,
+              "reason": "desk"
+            },
+            "longestLosingStreak": 3
+          },
+          {
+            "symbol": "ETH/USD",
+            "profit": 5743.72,
+            "maxDd": 0.21491386497942527,
+            "trades": 9,
+            "wins": 5,
+            "winRate": 0.5555555555555556,
+            "avgWin": 1519.9719990365952,
+            "avgLoss": -464.0348729709518,
+            "worst": {
+              "symbol": "ETH/USD",
+              "side": "SHORT",
+              "pnl": -978.9847277650329,
+              "ret": -0.0815681728385953,
+              "reason": "desk"
+            },
+            "longestLosingStreak": 2
+          },
+          {
+            "symbol": "SOL/USD",
+            "profit": 6237.65,
+            "maxDd": 0.2610442827378951,
+            "trades": 9,
+            "wins": 4,
+            "winRate": 0.4444444444444444,
+            "avgWin": 2145.126313158964,
+            "avgLoss": -468.5707221503547,
+            "worst": {
+              "symbol": "SOL/USD",
+              "side": "LONG",
+              "pnl": -983.2312759995795,
+              "ret": -0.10059841098613664,
+              "reason": "desk"
+            },
+            "longestLosingStreak": 3
+          }
+        ]
+      },
+      "full": {
+        "profit": 29018.01,
+        "maxDd": 0.35425942910748187,
+        "trades": 77,
+        "winRate": 0.4155844155844156,
+        "avgWin": 1776.9562264674414,
+        "avgLoss": -618.7687158263349,
+        "worst": {
+          "symbol": "ETH/USD",
+          "side": "LONG",
+          "pnl": -1767.1068628105718,
+          "ret": -0.15300351336472418,
+          "reason": "desk"
+        },
+        "longestLosingStreak": 8,
+        "exits": {
+          "tp": 0,
+          "sl": 0,
+          "trail": 0,
+          "spike": 0,
+          "ema9": 0,
+          "volume": 0,
+          "cross": 0,
+          "flatten": 0
+        },
+        "signalTies": 0,
+        "fallbackDays": 0,
+        "shortDays": 0,
+        "buyHold": -11617.68,
+        "coins": [
+          {
+            "symbol": "BTC/USD",
+            "profit": 4986.62,
+            "maxDd": 0.30945811505562354,
+            "trades": 28,
+            "wins": 10,
+            "winRate": 0.35714285714285715,
+            "avgWin": 1179.5918414888442,
+            "avgLoss": -378.2944086082956,
+            "worst": {
+              "symbol": "BTC/USD",
+              "side": "LONG",
+              "pnl": -885.2615110532192,
+              "ret": -0.09664883412675196,
+              "reason": "desk"
+            },
+            "longestLosingStreak": 7
+          },
+          {
+            "symbol": "ETH/USD",
+            "profit": 12400.17,
+            "maxDd": 0.42929819471422176,
+            "trades": 25,
+            "wins": 11,
+            "winRate": 0.44,
+            "avgWin": 2132.03830038346,
+            "avgLoss": -789.4466393725321,
+            "worst": {
+              "symbol": "ETH/USD",
+              "side": "LONG",
+              "pnl": -1767.1068628105718,
+              "ret": -0.15300351336472418,
+              "reason": "desk"
+            },
+            "longestLosingStreak": 4
+          },
+          {
+            "symbol": "SOL/USD",
+            "profit": 11631.22,
+            "maxDd": 0.48609753295094177,
+            "trades": 24,
+            "wins": 11,
+            "winRate": 0.4583333333333333,
+            "avgWin": 1964.9326843501474,
+            "avgLoss": -767.9261466169462,
+            "worst": {
+              "symbol": "SOL/USD",
+              "side": "SHORT",
+              "pnl": -1568.633572757827,
+              "ret": -0.10534616860897272,
+              "reason": "desk"
+            },
+            "longestLosingStreak": 4
+          }
+        ]
+      },
+      "folds": [
+        {
+          "from": "2025-08-16",
+          "to": "2025-10-03",
+          "profit": -2762.97,
+          "trades": 9,
+          "maxDd": 0.09868267648294139
+        },
+        {
+          "from": "2025-10-03",
+          "to": "2025-11-20",
+          "profit": 3127.91,
+          "trades": 9,
+          "maxDd": 0.19919270661384483
+        },
+        {
+          "from": "2025-11-20",
+          "to": "2026-01-07",
+          "profit": -1828.14,
+          "trades": 4,
+          "maxDd": 0.08648246091651247
+        },
+        {
+          "from": "2026-01-07",
+          "to": "2026-02-24",
+          "profit": 12022.58,
+          "trades": 6,
+          "maxDd": 0.12514487636461297
+        }
+      ],
+      "fullTrades": {
+        "BTC/USD": 28,
+        "ETH/USD": 25,
+        "SOL/USD": 24
+      }
+    },
+    "falconOwnBinance": {
+      "name": "Falcon",
+      "coins": [
+        "BTC/USD",
+        "ETH/USD",
+        "SOL/USD"
+      ],
+      "costName": "binance-usdt-m",
+      "train": {
+        "profit": 14450.63,
+        "maxDd": 0.347645022522756,
+        "trades": 47,
+        "winRate": 0.3829787234042553,
+        "avgWin": 1787.63587693143,
+        "avgLoss": -611.2693914658438,
+        "worst": {
+          "symbol": "ETH/USD",
+          "side": "LONG",
+          "pnl": -1789.8825956440185,
+          "ret": -0.1518071881830237,
+          "reason": "desk"
+        },
+        "longestLosingStreak": 8,
+        "exits": {
+          "tp": 0,
+          "sl": 0,
+          "trail": 0,
+          "spike": 0,
+          "ema9": 0,
+          "volume": 0,
+          "cross": 0,
+          "flatten": 0
+        },
+        "signalTies": 0,
+        "fallbackDays": 0,
+        "shortDays": 0,
+        "buyHold": -12308.78,
+        "coins": [
+          {
+            "symbol": "BTC/USD",
+            "profit": 2765.23,
+            "maxDd": 0.29373075753081296,
+            "trades": 17,
+            "wins": 5,
+            "winRate": 0.29411764705882354,
+            "avgWin": 1378.9818650896937,
+            "avgLoss": -344.1396037502521,
+            "worst": {
+              "symbol": "BTC/USD",
+              "side": "LONG",
+              "pnl": -897.3082179292727,
+              "ret": -0.09563964441372638,
+              "reason": "desk"
+            },
+            "longestLosingStreak": 7
+          },
+          {
+            "symbol": "ETH/USD",
+            "profit": 6359.87,
+            "maxDd": 0.42352826598254867,
+            "trades": 16,
+            "wins": 6,
+            "winRate": 0.375,
+            "avgWin": 2449.2059485742107,
+            "avgLoss": -833.5365777721723,
+            "worst": {
+              "symbol": "ETH/USD",
+              "side": "LONG",
+              "pnl": -1789.8825956440185,
+              "ret": -0.1518071881830237,
+              "reason": "desk"
+            },
+            "longestLosingStreak": 4
+          },
+          {
+            "symbol": "SOL/USD",
+            "profit": 5325.53,
+            "maxDd": 0.47771660179881664,
+            "trades": 14,
+            "wins": 7,
+            "winRate": 0.5,
+            "avgWin": 1512.4715382674299,
+            "avgLoss": -751.681618540675,
+            "worst": {
+              "symbol": "SOL/USD",
+              "side": "SHORT",
+              "pnl": -1427.6070477770797,
+              "ret": -0.12817356243820027,
+              "reason": "desk"
+            },
+            "longestLosingStreak": 2
+          }
+        ]
+      },
+      "holdout": {
+        "profit": 15649.03,
+        "maxDd": 0.18178453168182215,
+        "trades": 30,
+        "winRate": 0.5333333333333333,
+        "avgWin": 1359.708817501094,
+        "avgLoss": -436.16486129891194,
+        "worst": {
+          "symbol": "SOL/USD",
+          "side": "LONG",
+          "pnl": -997.4148207064827,
+          "ret": -0.10119713130200662,
+          "reason": "desk"
+        },
+        "longestLosingStreak": 5,
+        "exits": {
+          "tp": 0,
+          "sl": 0,
+          "trail": 0,
+          "spike": 0,
+          "ema9": 0,
+          "volume": 0,
+          "cross": 0,
+          "flatten": 0
+        },
+        "signalTies": 0,
+        "fallbackDays": 0,
+        "shortDays": 0,
+        "buyHold": -1686.02,
+        "coins": [
+          {
+            "symbol": "BTC/USD",
+            "profit": 3176.85,
+            "maxDd": 0.151152990735147,
+            "trades": 12,
+            "wins": 6,
+            "winRate": 0.5,
+            "avgWin": 872.1226059836428,
+            "avgLoss": -342.6472105797625,
+            "worst": {
+              "symbol": "BTC/USD",
+              "side": "LONG",
+              "pnl": -638.6832918019,
+              "ret": -0.05104811168581712,
+              "reason": "desk"
+            },
+            "longestLosingStreak": 3
+          },
+          {
+            "symbol": "ETH/USD",
+            "profit": 5985.39,
+            "maxDd": 0.20757459312691715,
+            "trades": 9,
+            "wins": 6,
+            "winRate": 0.6666666666666666,
+            "avgWin": 1290.7944540981398,
+            "avgLoss": -586.4590555628147,
+            "worst": {
+              "symbol": "ETH/USD",
+              "side": "SHORT",
+              "pnl": -955.6172810700353,
+              "ret": -0.07902878027832852,
+              "reason": "desk"
+            },
+            "longestLosingStreak": 1
+          },
+          {
+            "symbol": "SOL/USD",
+            "profit": 6486.79,
+            "maxDd": 0.2587575866441768,
+            "trades": 9,
+            "wins": 4,
+            "winRate": 0.4444444444444444,
+            "avgWin": 2194.459679881703,
+            "avgLoss": -458.20952560354965,
+            "worst": {
+              "symbol": "SOL/USD",
+              "side": "LONG",
+              "pnl": -997.4148207064827,
+              "ret": -0.10119713130200662,
+              "reason": "desk"
+            },
+            "longestLosingStreak": 3
+          }
+        ]
+      },
+      "full": {
+        "profit": 32065.44,
+        "maxDd": 0.347645022522756,
+        "trades": 77,
+        "winRate": 0.42857142857142855,
+        "avgWin": 1805.844154820316,
+        "avgLoss": -625.6231390160874,
+        "worst": {
+          "symbol": "ETH/USD",
+          "side": "LONG",
+          "pnl": -1789.8825956440185,
+          "ret": -0.1518071881830237,
+          "reason": "desk"
+        },
+        "longestLosingStreak": 8,
+        "exits": {
+          "tp": 0,
+          "sl": 0,
+          "trail": 0,
+          "spike": 0,
+          "ema9": 0,
+          "volume": 0,
+          "cross": 0,
+          "flatten": 0
+        },
+        "signalTies": 0,
+        "fallbackDays": 0,
+        "shortDays": 0,
+        "buyHold": -11617.68,
+        "coins": [
+          {
+            "symbol": "BTC/USD",
+            "profit": 5870.05,
+            "maxDd": 0.29373075753081296,
+            "trades": 28,
+            "wins": 10,
+            "winRate": 0.35714285714285715,
+            "avgWin": 1247.5810287446343,
+            "avgLoss": -366.98654812927055,
+            "worst": {
+              "symbol": "BTC/USD",
+              "side": "LONG",
+              "pnl": -897.3082179292727,
+              "ret": -0.09563964441372638,
+              "reason": "desk"
+            },
+            "longestLosingStreak": 7
+          },
+          {
+            "symbol": "ETH/USD",
+            "profit": 13542.48,
+            "maxDd": 0.42352826598254867,
+            "trades": 25,
+            "wins": 12,
+            "winRate": 0.48,
+            "avgWin": 2039.0803360228156,
+            "avgLoss": -840.4990624583209,
+            "worst": {
+              "symbol": "ETH/USD",
+              "side": "LONG",
+              "pnl": -1789.8825956440185,
+              "ret": -0.1518071881830237,
+              "reason": "desk"
+            },
+            "longestLosingStreak": 4
+          },
+          {
+            "symbol": "SOL/USD",
+            "profit": 12652.91,
+            "maxDd": 0.47771660179881664,
+            "trades": 24,
+            "wins": 11,
+            "winRate": 0.4583333333333333,
+            "avgWin": 2058.916617213665,
+            "avgLoss": -768.859418340216,
+            "worst": {
+              "symbol": "SOL/USD",
+              "side": "SHORT",
+              "pnl": -1585.493414585974,
+              "ret": -0.10345439751305928,
+              "reason": "desk"
+            },
+            "longestLosingStreak": 4
+          }
+        ]
+      },
+      "folds": [
+        {
+          "from": "2025-08-16",
+          "to": "2025-10-03",
+          "profit": -2621.64,
+          "trades": 9,
+          "maxDd": 0.09780333386480713
+        },
+        {
+          "from": "2025-10-03",
+          "to": "2025-11-20",
+          "profit": 3409.67,
+          "trades": 9,
+          "maxDd": 0.19502300567394787
+        },
+        {
+          "from": "2025-11-20",
+          "to": "2026-01-07",
+          "profit": -1724.94,
+          "trades": 4,
+          "maxDd": 0.08648246091651231
+        },
+        {
+          "from": "2026-01-07",
+          "to": "2026-02-24",
+          "profit": 12219.61,
+          "trades": 6,
+          "maxDd": 0.12456841705170127
+        }
+      ],
+      "fullTrades": {
+        "BTC/USD": 28,
+        "ETH/USD": 25,
+        "SOL/USD": 24
+      }
+    },
+    "quantumCommonLab": {
+      "name": "Quantum",
+      "coins": [
+        "ETH/USD",
+        "SOL/USD"
+      ],
+      "costName": "lab",
+      "train": {
+        "profit": -723.26,
+        "maxDd": 0.0390434557678808,
+        "trades": 24,
+        "winRate": 0.4583333333333333,
+        "avgWin": 19.84277363129294,
+        "avgLoss": -72.42570182156348,
+        "worst": {
+          "symbol": "SOL/USD",
+          "side": "SHORT",
+          "pnl": -129.45411129730337,
+          "ret": -0.01286782400878761,
+          "reason": "spike"
+        },
+        "longestLosingStreak": 4,
+        "exits": {
+          "tp": 11,
+          "sl": 0,
+          "trail": 0,
+          "spike": 3,
+          "ema9": 9,
+          "volume": 1,
+          "cross": 0,
+          "flatten": 0
+        },
+        "signalTies": 0,
+        "fallbackDays": 0,
+        "shortDays": 0,
+        "buyHold": -8943.25,
+        "coins": [
+          {
+            "symbol": "ETH/USD",
+            "profit": -488.36,
+            "maxDd": 0.050723956854474846,
+            "trades": 12,
+            "wins": 4,
+            "winRate": 0.3333333333333333,
+            "avgWin": 19.725619218298206,
+            "avgLoss": -70.90819332893273,
+            "worst": {
+              "symbol": "ETH/USD",
+              "side": "SHORT",
+              "pnl": -126.4815191314188,
+              "ret": -0.012867824008787498,
+              "reason": "spike"
+            },
+            "longestLosingStreak": 3
+          },
+          {
+            "symbol": "SOL/USD",
+            "profit": -234.9,
+            "maxDd": 0.02934267618723101,
+            "trades": 12,
+            "wins": 7,
+            "winRate": 0.5833333333333334,
+            "avgWin": 19.90971901014708,
+            "avgLoss": -74.85371540977269,
+            "worst": {
+              "symbol": "SOL/USD",
+              "side": "SHORT",
+              "pnl": -129.45411129730337,
+              "ret": -0.01286782400878761,
+              "reason": "spike"
+            },
+            "longestLosingStreak": 2
+          }
+        ]
+      },
+      "holdout": {
+        "profit": -780.02,
+        "maxDd": 0.039001058917748375,
+        "trades": 16,
+        "winRate": 0.0625,
+        "avgWin": 19.52762378505968,
+        "avgLoss": -53.30325347600189,
+        "worst": {
+          "symbol": "SOL/USD",
+          "side": "LONG",
+          "pnl": -165.12140241976738,
+          "ret": -0.016628336509054376,
+          "reason": "trail"
+        },
+        "longestLosingStreak": 11,
+        "exits": {
+          "tp": 1,
+          "sl": 0,
+          "trail": 1,
+          "spike": 0,
+          "ema9": 12,
+          "volume": 2,
+          "cross": 0,
+          "flatten": 0
+        },
+        "signalTies": 0,
+        "fallbackDays": 0,
+        "shortDays": 0,
+        "buyHold": -1734.93,
+        "coins": [
+          {
+            "symbol": "ETH/USD",
+            "profit": -204.32,
+            "maxDd": 0.020432367047138723,
+            "trades": 6,
+            "wins": 1,
+            "winRate": 0.16666666666666666,
+            "avgWin": 19.52762378505968,
+            "avgLoss": -44.77025885128954,
+            "worst": {
+              "symbol": "ETH/USD",
+              "side": "SHORT",
+              "pnl": -70.79242160340749,
+              "ret": -0.007157259398793858,
+              "reason": "ema9"
+            },
+            "longestLosingStreak": 4
+          },
+          {
+            "symbol": "SOL/USD",
+            "profit": -575.7,
+            "maxDd": 0.057569750788358034,
+            "trades": 10,
+            "wins": 0,
+            "winRate": 0,
+            "avgWin": null,
+            "avgLoss": -57.56975078835806,
+            "worst": {
+              "symbol": "SOL/USD",
+              "side": "LONG",
+              "pnl": -165.12140241976738,
+              "ret": -0.016628336509054376,
+              "reason": "trail"
+            },
+            "longestLosingStreak": 10
+          }
+        ]
+      },
+      "full": {
+        "profit": -1479.78,
+        "maxDd": 0.07675639871698822,
+        "trades": 40,
+        "winRate": 0.3,
+        "avgWin": 19.737039724967204,
+        "avgLoss": -61.30813176858057,
+        "worst": {
+          "symbol": "SOL/USD",
+          "side": "LONG",
+          "pnl": -161.24269169468874,
+          "ret": -0.016628336509054376,
+          "reason": "trail"
+        },
+        "longestLosingStreak": 13,
+        "exits": {
+          "tp": 12,
+          "sl": 0,
+          "trail": 1,
+          "spike": 3,
+          "ema9": 21,
+          "volume": 3,
+          "cross": 0,
+          "flatten": 0
+        },
+        "signalTies": 0,
+        "fallbackDays": 0,
+        "shortDays": 0,
+        "buyHold": -8692.21,
+        "coins": [
+          {
+            "symbol": "ETH/USD",
+            "profit": -682.71,
+            "maxDd": 0.07011991339707965,
+            "trades": 18,
+            "wins": 5,
+            "winRate": 0.2777777777777778,
+            "avgWin": 19.495288725715376,
+            "avgLoss": -60.014213104974274,
+            "worst": {
+              "symbol": "ETH/USD",
+              "side": "SHORT",
+              "pnl": -126.4815191314188,
+              "ret": -0.012867824008787498,
+              "reason": "spike"
+            },
+            "longestLosingStreak": 6
+          },
+          {
+            "symbol": "SOL/USD",
+            "profit": -797.07,
+            "maxDd": 0.0852231764200266,
+            "trades": 22,
+            "wins": 7,
+            "winRate": 0.3181818181818182,
+            "avgWin": 19.90971901014708,
+            "avgLoss": -62.42952794370602,
+            "worst": {
+              "symbol": "SOL/USD",
+              "side": "LONG",
+              "pnl": -161.24269169468874,
+              "ret": -0.016628336509054376,
+              "reason": "trail"
+            },
+            "longestLosingStreak": 11
+          }
+        ]
+      },
+      "folds": [
+        {
+          "from": "2025-08-16",
+          "to": "2025-10-03",
+          "profit": -143.56,
+          "trades": 4,
+          "maxDd": 0.007178004705363128
+        },
+        {
+          "from": "2025-10-03",
+          "to": "2025-11-20",
+          "profit": -335.76,
+          "trades": 4,
+          "maxDd": 0.016788177137887942
+        },
+        {
+          "from": "2025-11-20",
+          "to": "2026-01-07",
+          "profit": -59.81,
+          "trades": 4,
+          "maxDd": 0.003984651442164249
+        },
+        {
+          "from": "2026-01-07",
+          "to": "2026-02-24",
+          "profit": -196.49,
+          "trades": 2,
+          "maxDd": 0.009824339387725195
+        }
+      ],
+      "fullTrades": {
+        "ETH/USD": 18,
+        "SOL/USD": 22
+      }
+    },
+    "quantumCommonBinance": {
+      "name": "Quantum",
+      "coins": [
+        "ETH/USD",
+        "SOL/USD"
+      ],
+      "costName": "binance-usdt-m",
+      "train": {
+        "profit": -222.4,
+        "maxDd": 0.02450007367928964,
+        "trades": 24,
+        "winRate": 0.5,
+        "avgWin": 40.52207975541277,
+        "avgLoss": -59.0552666697485,
+        "worst": {
+          "symbol": "SOL/USD",
+          "side": "SHORT",
+          "pnl": -111.27617846050265,
+          "ret": -0.010890841584158317,
+          "reason": "spike"
+        },
+        "longestLosingStreak": 4,
+        "exits": {
+          "tp": 11,
+          "sl": 0,
+          "trail": 0,
+          "spike": 3,
+          "ema9": 9,
+          "volume": 1,
+          "cross": 0,
+          "flatten": 0
+        },
+        "signalTies": 0,
+        "fallbackDays": 0,
+        "shortDays": 0,
+        "buyHold": -8943.25,
+        "coins": [
+          {
+            "symbol": "ETH/USD",
+            "profit": -245.75,
+            "maxDd": 0.030095001771237372,
+            "trades": 12,
+            "wins": 4,
+            "winRate": 0.3333333333333333,
+            "avgWin": 42.891100065476344,
+            "avgLoss": -52.16396238170159,
+            "worst": {
+              "symbol": "ETH/USD",
+              "side": "SHORT",
+              "pnl": -108.65562815884633,
+              "ret": -0.010890841584158317,
+              "reason": "spike"
+            },
+            "longestLosingStreak": 3
+          },
+          {
+            "symbol": "SOL/USD",
+            "profit": 23.35,
+            "maxDd": 0.01899302959615814,
+            "trades": 12,
+            "wins": 8,
+            "winRate": 0.6666666666666666,
+            "avgWin": 39.33756960038099,
+            "avgLoss": -72.83787524584234,
+            "worst": {
+              "symbol": "SOL/USD",
+              "side": "SHORT",
+              "pnl": -111.27617846050265,
+              "ret": -0.010890841584158317,
+              "reason": "spike"
+            },
+            "longestLosingStreak": 1
+          }
+        ]
+      },
+      "holdout": {
+        "profit": -468.17,
+        "maxDd": 0.02340832623533024,
+        "trades": 16,
+        "winRate": 0.1875,
+        "avgWin": 19.12718798005388,
+        "avgLoss": -40.4267760497511,
+        "worst": {
+          "symbol": "SOL/USD",
+          "side": "LONG",
+          "pnl": -146.24131819989532,
+          "ret": -0.014668260464012728,
+          "reason": "trail"
+        },
+        "longestLosingStreak": 7,
+        "exits": {
+          "tp": 1,
+          "sl": 0,
+          "trail": 1,
+          "spike": 0,
+          "ema9": 12,
+          "volume": 2,
+          "cross": 0,
+          "flatten": 0
+        },
+        "signalTies": 0,
+        "fallbackDays": 0,
+        "shortDays": 0,
+        "buyHold": -1734.93,
+        "coins": [
+          {
+            "symbol": "ETH/USD",
+            "profit": -82.95,
+            "maxDd": 0.010092166977238049,
+            "trades": 6,
+            "wins": 2,
+            "winRate": 0.3333333333333333,
+            "avgWin": 22.260099153942694,
+            "avgLoss": -31.868536411385065,
+            "worst": {
+              "symbol": "ETH/USD",
+              "side": "SHORT",
+              "pnl": -51.41176222460036,
+              "ret": -0.005166756787547369,
+              "reason": "ema9"
+            },
+            "longestLosingStreak": 2
+          },
+          {
+            "symbol": "SOL/USD",
+            "profit": -385.21,
+            "maxDd": 0.03852125773689477,
+            "trades": 10,
+            "wins": 1,
+            "winRate": 0.1,
+            "avgWin": 12.861365632276254,
+            "avgLoss": -44.23043811124711,
+            "worst": {
+              "symbol": "SOL/USD",
+              "side": "LONG",
+              "pnl": -146.24131819989532,
+              "ret": -0.014668260464012728,
+              "reason": "trail"
+            },
+            "longestLosingStreak": 8
+          }
+        ]
+      },
+      "full": {
+        "profit": -689.43,
+        "maxDd": 0.04753548459590448,
+        "trades": 40,
+        "winRate": 0.375,
+        "avgWin": 36.1721652821292,
+        "avgLoss": -49.28032444237914,
+        "worst": {
+          "symbol": "SOL/USD",
+          "side": "LONG",
+          "pnl": -146.58277787007455,
+          "ret": -0.014668260464012728,
+          "reason": "trail"
+        },
+        "longestLosingStreak": 7,
+        "exits": {
+          "tp": 12,
+          "sl": 0,
+          "trail": 1,
+          "spike": 3,
+          "ema9": 21,
+          "volume": 3,
+          "cross": 0,
+          "flatten": 0
+        },
+        "signalTies": 0,
+        "fallbackDays": 0,
+        "shortDays": 0,
+        "buyHold": -8692.21,
+        "coins": [
+          {
+            "symbol": "ETH/USD",
+            "profit": -326.66,
+            "maxDd": 0.03988344496541977,
+            "trades": 18,
+            "wins": 6,
+            "winRate": 0.3333333333333333,
+            "avgWin": 35.83175445370123,
+            "avgLoss": -45.137766833611316,
+            "worst": {
+              "symbol": "ETH/USD",
+              "side": "SHORT",
+              "pnl": -108.65562815884633,
+              "ret": -0.010890841584158317,
+              "reason": "spike"
+            },
+            "longestLosingStreak": 3
+          },
+          {
+            "symbol": "SOL/USD",
+            "profit": -362.76,
+            "maxDd": 0.056782651944774706,
+            "trades": 22,
+            "wins": 9,
+            "winRate": 0.4090909090909091,
+            "avgWin": 36.39910583441452,
+            "avgLoss": -53.10422377354943,
+            "worst": {
+              "symbol": "SOL/USD",
+              "side": "LONG",
+              "pnl": -146.58277787007455,
+              "ret": -0.014668260464012728,
+              "reason": "trail"
+            },
+            "longestLosingStreak": 8
+          }
+        ]
+      },
+      "folds": [
+        {
+          "from": "2025-08-16",
+          "to": "2025-10-03",
+          "profit": -57.6,
+          "trades": 4,
+          "maxDd": 0.005431487806335292
+        },
+        {
+          "from": "2025-10-03",
+          "to": "2025-11-20",
+          "profit": -254.13,
+          "trades": 4,
+          "maxDd": 0.012706726014557898
+        },
+        {
+          "from": "2025-11-20",
+          "to": "2026-01-07",
+          "profit": 25.85,
+          "trades": 4,
+          "maxDd": 0.0024189997630350265
+        },
+        {
+          "from": "2026-01-07",
+          "to": "2026-02-24",
+          "profit": -156.76,
+          "trades": 2,
+          "maxDd": 0.00783813661360582
+        }
+      ],
+      "fullTrades": {
+        "ETH/USD": 18,
+        "SOL/USD": 22
+      }
+    },
+    "quantumOwnLab": {
+      "name": "Quantum",
+      "coins": [
+        "ETH/USD",
+        "SOL/USD",
+        "BNB/USD",
+        "XRP/USD"
+      ],
+      "costName": "lab",
+      "train": {
+        "profit": -1720.34,
+        "maxDd": 0.04396595970679263,
+        "trades": 50,
+        "winRate": 0.42,
+        "avgWin": 19.64080062010686,
+        "avgLoss": -73.54467816160034,
+        "worst": {
+          "symbol": "BNB/USD",
+          "side": "LONG",
+          "pnl": -173.95055497705897,
+          "ret": -0.01732564748424048,
+          "reason": "trail"
+        },
+        "longestLosingStreak": 5,
+        "exits": {
+          "tp": 21,
+          "sl": 0,
+          "trail": 1,
+          "spike": 3,
+          "ema9": 23,
+          "volume": 2,
+          "cross": 0,
+          "flatten": 0
+        },
+        "signalTies": 1,
+        "fallbackDays": 0,
+        "shortDays": 0,
+        "buyHold": -12939.06,
+        "coins": [
+          {
+            "symbol": "ETH/USD",
+            "profit": -488.36,
+            "maxDd": 0.050723956854474846,
+            "trades": 12,
+            "wins": 4,
+            "winRate": 0.3333333333333333,
+            "avgWin": 19.725619218298206,
+            "avgLoss": -70.90819332893273,
+            "worst": {
+              "symbol": "ETH/USD",
+              "side": "SHORT",
+              "pnl": -126.4815191314188,
+              "ret": -0.012867824008787498,
+              "reason": "spike"
+            },
+            "longestLosingStreak": 3
+          },
+          {
+            "symbol": "SOL/USD",
+            "profit": -234.9,
+            "maxDd": 0.02934267618723101,
+            "trades": 12,
+            "wins": 7,
+            "winRate": 0.5833333333333334,
+            "avgWin": 19.90971901014708,
+            "avgLoss": -74.85371540977269,
+            "worst": {
+              "symbol": "SOL/USD",
+              "side": "SHORT",
+              "pnl": -129.45411129730337,
+              "ret": -0.01286782400878761,
+              "reason": "spike"
+            },
+            "longestLosingStreak": 2
+          },
+          {
+            "symbol": "BNB/USD",
+            "profit": -532.82,
+            "maxDd": 0.0573793696238296,
+            "trades": 12,
+            "wins": 4,
+            "winRate": 0.3333333333333333,
+            "avgWin": 19.686538474121736,
+            "avgLoss": -76.44607475854546,
+            "worst": {
+              "symbol": "BNB/USD",
+              "side": "LONG",
+              "pnl": -173.95055497705897,
+              "ret": -0.01732564748424048,
+              "reason": "trail"
+            },
+            "longestLosingStreak": 6
+          },
+          {
+            "symbol": "XRP/USD",
+            "profit": -464.25,
+            "maxDd": 0.048953185309868606,
+            "trades": 14,
+            "wins": 6,
+            "winRate": 0.42857142857142855,
+            "avgWin": 19.240024863589117,
+            "avgLoss": -72.46161811721514,
+            "worst": {
+              "symbol": "XRP/USD",
+              "side": "LONG",
+              "pnl": -124.54017858323799,
+              "ret": -0.012634973804860672,
+              "reason": "ema9"
+            },
+            "longestLosingStreak": 5
+          }
+        ]
+      },
+      "holdout": {
+        "profit": -1472.78,
+        "maxDd": 0.03778794858761012,
+        "trades": 42,
+        "winRate": 0.2619047619047619,
+        "avgWin": 19.68200993752055,
+        "avgLoss": -54.49287214774214,
+        "worst": {
+          "symbol": "BNB/USD",
+          "side": "SHORT",
+          "pnl": -166.04997723946528,
+          "ret": -0.016660700273747442,
+          "reason": "trail"
+        },
+        "longestLosingStreak": 10,
+        "exits": {
+          "tp": 11,
+          "sl": 0,
+          "trail": 2,
+          "spike": 0,
+          "ema9": 25,
+          "volume": 4,
+          "cross": 0,
+          "flatten": 0
+        },
+        "signalTies": 0,
+        "fallbackDays": 0,
+        "shortDays": 0,
+        "buyHold": -4675.89,
+        "coins": [
+          {
+            "symbol": "ETH/USD",
+            "profit": -204.32,
+            "maxDd": 0.020432367047138723,
+            "trades": 6,
+            "wins": 1,
+            "winRate": 0.16666666666666666,
+            "avgWin": 19.52762378505968,
+            "avgLoss": -44.77025885128954,
+            "worst": {
+              "symbol": "ETH/USD",
+              "side": "SHORT",
+              "pnl": -70.79242160340749,
+              "ret": -0.007157259398793858,
+              "reason": "ema9"
+            },
+            "longestLosingStreak": 4
+          },
+          {
+            "symbol": "SOL/USD",
+            "profit": -575.7,
+            "maxDd": 0.057569750788358034,
+            "trades": 10,
+            "wins": 0,
+            "winRate": 0,
+            "avgWin": null,
+            "avgLoss": -57.56975078835806,
+            "worst": {
+              "symbol": "SOL/USD",
+              "side": "LONG",
+              "pnl": -165.12140241976738,
+              "ret": -0.016628336509054376,
+              "reason": "trail"
+            },
+            "longestLosingStreak": 10
+          },
+          {
+            "symbol": "BNB/USD",
+            "profit": -242.8,
+            "maxDd": 0.030126054211790397,
+            "trades": 12,
+            "wins": 6,
+            "winRate": 0.5,
+            "avgWin": 19.784861597882625,
+            "avgLoss": -60.25140929817198,
+            "worst": {
+              "symbol": "BNB/USD",
+              "side": "SHORT",
+              "pnl": -166.04997723946528,
+              "ret": -0.016660700273747442,
+              "reason": "trail"
+            },
+            "longestLosingStreak": 3
+          },
+          {
+            "symbol": "XRP/USD",
+            "profit": -449.96,
+            "maxDd": 0.04689091820547396,
+            "trades": 14,
+            "wins": 4,
+            "winRate": 0.2857142857142857,
+            "avgWin": 19.566328985092657,
+            "avgLoss": -52.8221778650946,
+            "worst": {
+              "symbol": "XRP/USD",
+              "side": "LONG",
+              "pnl": -75.80360244199555,
+              "ret": -0.007791299896527604,
+              "reason": "ema9"
+            },
+            "longestLosingStreak": 4
+          }
+        ]
+      },
+      "full": {
+        "profit": -3135.79,
+        "maxDd": 0.07978038243841515,
+        "trades": 92,
+        "winRate": 0.34782608695652173,
+        "avgWin": 19.313958910724285,
+        "avgLoss": -62.563910688571454,
+        "worst": {
+          "symbol": "BNB/USD",
+          "side": "LONG",
+          "pnl": -173.95055497705897,
+          "ret": -0.01732564748424048,
+          "reason": "trail"
+        },
+        "longestLosingStreak": 10,
+        "exits": {
+          "tp": 32,
+          "sl": 0,
+          "trail": 3,
+          "spike": 3,
+          "ema9": 48,
+          "volume": 6,
+          "cross": 0,
+          "flatten": 0
+        },
+        "signalTies": 1,
+        "fallbackDays": 0,
+        "shortDays": 0,
+        "buyHold": -13322.91,
+        "coins": [
+          {
+            "symbol": "ETH/USD",
+            "profit": -682.71,
+            "maxDd": 0.07011991339707965,
+            "trades": 18,
+            "wins": 5,
+            "winRate": 0.2777777777777778,
+            "avgWin": 19.495288725715376,
+            "avgLoss": -60.014213104974274,
+            "worst": {
+              "symbol": "ETH/USD",
+              "side": "SHORT",
+              "pnl": -126.4815191314188,
+              "ret": -0.012867824008787498,
+              "reason": "spike"
+            },
+            "longestLosingStreak": 6
+          },
+          {
+            "symbol": "SOL/USD",
+            "profit": -797.07,
+            "maxDd": 0.0852231764200266,
+            "trades": 22,
+            "wins": 7,
+            "winRate": 0.3181818181818182,
+            "avgWin": 19.90971901014708,
+            "avgLoss": -62.42952794370602,
+            "worst": {
+              "symbol": "SOL/USD",
+              "side": "LONG",
+              "pnl": -161.24269169468874,
+              "ret": -0.016628336509054376,
+              "reason": "trail"
+            },
+            "longestLosingStreak": 11
+          },
+          {
+            "symbol": "BNB/USD",
+            "profit": -762.68,
+            "maxDd": 0.08180311484513998,
+            "trades": 24,
+            "wins": 10,
+            "winRate": 0.4166666666666667,
+            "avgWin": 19.113023249527107,
+            "avgLoss": -68.1296479969403,
+            "worst": {
+              "symbol": "BNB/USD",
+              "side": "LONG",
+              "pnl": -173.95055497705897,
+              "ret": -0.01732564748424048,
+              "reason": "trail"
+            },
+            "longestLosingStreak": 6
+          },
+          {
+            "symbol": "XRP/USD",
+            "profit": -893.32,
+            "maxDd": 0.09113927379384579,
+            "trades": 28,
+            "wins": 10,
+            "winRate": 0.35714285714285715,
+            "avgWin": 19.00719759482995,
+            "avgLoss": -60.188437768714806,
+            "worst": {
+              "symbol": "XRP/USD",
+              "side": "LONG",
+              "pnl": -124.54017858323799,
+              "ret": -0.012634973804860672,
+              "reason": "ema9"
+            },
+            "longestLosingStreak": 5
+          }
+        ]
+      },
+      "folds": [
+        {
+          "from": "2025-08-16",
+          "to": "2025-10-03",
+          "profit": -215.82,
+          "trades": 7,
+          "maxDd": 0.005395596486156865
+        },
+        {
+          "from": "2025-10-03",
+          "to": "2025-11-20",
+          "profit": -437.19,
+          "trades": 7,
+          "maxDd": 0.01092966324445315
+        },
+        {
+          "from": "2025-11-20",
+          "to": "2026-01-07",
+          "profit": -20.04,
+          "trades": 6,
+          "maxDd": 0.0019923257210821247
+        },
+        {
+          "from": "2026-01-07",
+          "to": "2026-02-24",
+          "profit": -266.6,
+          "trades": 4,
+          "maxDd": 0.006664911068607762
+        }
+      ],
+      "fullTrades": {
+        "ETH/USD": 18,
+        "SOL/USD": 22,
+        "BNB/USD": 24,
+        "XRP/USD": 28
+      }
+    },
+    "quantumOwnBinance": {
+      "name": "Quantum",
+      "coins": [
+        "ETH/USD",
+        "SOL/USD",
+        "BNB/USD",
+        "XRP/USD"
+      ],
+      "costName": "binance-usdt-m",
+      "train": {
+        "profit": -688.89,
+        "maxDd": 0.01942521432895642,
+        "trades": 50,
+        "winRate": 0.48,
+        "avgWin": 38.07737370385054,
+        "avgLoss": -61.64406907067192,
+        "worst": {
+          "symbol": "BNB/USD",
+          "side": "LONG",
+          "pnl": -154.97557128894047,
+          "ret": -0.015364884647864653,
+          "reason": "trail"
+        },
+        "longestLosingStreak": 5,
+        "exits": {
+          "tp": 21,
+          "sl": 0,
+          "trail": 1,
+          "spike": 3,
+          "ema9": 23,
+          "volume": 2,
+          "cross": 0,
+          "flatten": 0
+        },
+        "signalTies": 1,
+        "fallbackDays": 0,
+        "shortDays": 0,
+        "buyHold": -12939.06,
+        "coins": [
+          {
+            "symbol": "ETH/USD",
+            "profit": -245.75,
+            "maxDd": 0.030095001771237372,
+            "trades": 12,
+            "wins": 4,
+            "winRate": 0.3333333333333333,
+            "avgWin": 42.891100065476344,
+            "avgLoss": -52.16396238170159,
+            "worst": {
+              "symbol": "ETH/USD",
+              "side": "SHORT",
+              "pnl": -108.65562815884633,
+              "ret": -0.010890841584158317,
+              "reason": "spike"
+            },
+            "longestLosingStreak": 3
+          },
+          {
+            "symbol": "SOL/USD",
+            "profit": 23.35,
+            "maxDd": 0.01899302959615814,
+            "trades": 12,
+            "wins": 8,
+            "winRate": 0.6666666666666666,
+            "avgWin": 39.33756960038099,
+            "avgLoss": -72.83787524584234,
+            "worst": {
+              "symbol": "SOL/USD",
+              "side": "SHORT",
+              "pnl": -111.27617846050265,
+              "ret": -0.010890841584158317,
+              "reason": "spike"
+            },
+            "longestLosingStreak": 1
+          },
+          {
+            "symbol": "BNB/USD",
+            "profit": -290.86,
+            "maxDd": 0.041856776284562566,
+            "trades": 12,
+            "wins": 5,
+            "winRate": 0.4166666666666667,
+            "avgWin": 34.85433271252849,
+            "avgLoss": -66.44764822979228,
+            "worst": {
+              "symbol": "BNB/USD",
+              "side": "LONG",
+              "pnl": -154.97557128894047,
+              "ret": -0.015364884647864653,
+              "reason": "trail"
+            },
+            "longestLosingStreak": 6
+          },
+          {
+            "symbol": "XRP/USD",
+            "profit": -175.63,
+            "maxDd": 0.03523916485493868,
+            "trades": 14,
+            "wins": 7,
+            "winRate": 0.5,
+            "avgWin": 36.18862118068817,
+            "avgLoss": -61.278436884563135,
+            "worst": {
+              "symbol": "XRP/USD",
+              "side": "LONG",
+              "pnl": -105.94557901576583,
+              "ret": -0.010659608372002902,
+              "reason": "ema9"
+            },
+            "longestLosingStreak": 5
+          }
+        ]
+      },
+      "holdout": {
+        "profit": -622.61,
+        "maxDd": 0.01851650673902481,
+        "trades": 42,
+        "winRate": 0.3333333333333333,
+        "avgWin": 35.187268020309666,
+        "avgLoss": -39.82966773971702,
+        "worst": {
+          "symbol": "BNB/USD",
+          "side": "SHORT",
+          "pnl": -147.95336001216788,
+          "ret": -0.014684022378682292,
+          "reason": "trail"
+        },
+        "longestLosingStreak": 7,
+        "exits": {
+          "tp": 11,
+          "sl": 0,
+          "trail": 2,
+          "spike": 0,
+          "ema9": 25,
+          "volume": 4,
+          "cross": 0,
+          "flatten": 0
+        },
+        "signalTies": 0,
+        "fallbackDays": 0,
+        "shortDays": 0,
+        "buyHold": -4675.89,
+        "coins": [
+          {
+            "symbol": "ETH/USD",
+            "profit": -82.95,
+            "maxDd": 0.010092166977238049,
+            "trades": 6,
+            "wins": 2,
+            "winRate": 0.3333333333333333,
+            "avgWin": 22.260099153942694,
+            "avgLoss": -31.868536411385065,
+            "worst": {
+              "symbol": "ETH/USD",
+              "side": "SHORT",
+              "pnl": -51.41176222460036,
+              "ret": -0.005166756787547369,
+              "reason": "ema9"
+            },
+            "longestLosingStreak": 2
+          },
+          {
+            "symbol": "SOL/USD",
+            "profit": -385.21,
+            "maxDd": 0.03852125773689477,
+            "trades": 10,
+            "wins": 1,
+            "winRate": 0.1,
+            "avgWin": 12.861365632276254,
+            "avgLoss": -44.23043811124711,
+            "worst": {
+              "symbol": "SOL/USD",
+              "side": "LONG",
+              "pnl": -146.24131819989532,
+              "ret": -0.014668260464012728,
+              "reason": "trail"
+            },
+            "longestLosingStreak": 8
+          },
+          {
+            "symbol": "BNB/USD",
+            "profit": 12.41,
+            "maxDd": 0.015716903674964273,
+            "trades": 12,
+            "wins": 7,
+            "winRate": 0.5833333333333334,
+            "avgWin": 37.77006366717319,
+            "avgLoss": -50.395360158018526,
+            "worst": {
+              "symbol": "BNB/USD",
+              "side": "SHORT",
+              "pnl": -147.95336001216788,
+              "ret": -0.014684022378682292,
+              "reason": "trail"
+            },
+            "longestLosingStreak": 2
+          },
+          {
+            "symbol": "XRP/USD",
+            "profit": -166.86,
+            "maxDd": 0.020892440489870767,
+            "trades": 14,
+            "wins": 4,
+            "winRate": 0.2857142857142857,
+            "avgWin": 42.71243566849034,
+            "avgLoss": -33.770580727521946,
+            "worst": {
+              "symbol": "XRP/USD",
+              "side": "LONG",
+              "pnl": -57.69418454925689,
+              "ret": -0.005807275445443023,
+              "reason": "ema9"
+            },
+            "longestLosingStreak": 4
+          }
+        ]
+      },
+      "full": {
+        "profit": -1307.79,
+        "maxDd": 0.03582188276084825,
+        "trades": 92,
+        "winRate": 0.41304347826086957,
+        "avgWin": 36.70326203587115,
+        "avgLoss": -50.0465404990597,
+        "worst": {
+          "symbol": "BNB/USD",
+          "side": "LONG",
+          "pnl": -154.97557128894047,
+          "ret": -0.015364884647864653,
+          "reason": "trail"
+        },
+        "longestLosingStreak": 7,
+        "exits": {
+          "tp": 32,
+          "sl": 0,
+          "trail": 3,
+          "spike": 3,
+          "ema9": 48,
+          "volume": 6,
+          "cross": 0,
+          "flatten": 0
+        },
+        "signalTies": 1,
+        "fallbackDays": 0,
+        "shortDays": 0,
+        "buyHold": -13322.91,
+        "coins": [
+          {
+            "symbol": "ETH/USD",
+            "profit": -326.66,
+            "maxDd": 0.03988344496541977,
+            "trades": 18,
+            "wins": 6,
+            "winRate": 0.3333333333333333,
+            "avgWin": 35.83175445370123,
+            "avgLoss": -45.137766833611316,
+            "worst": {
+              "symbol": "ETH/USD",
+              "side": "SHORT",
+              "pnl": -108.65562815884633,
+              "ret": -0.010890841584158317,
+              "reason": "spike"
+            },
+            "longestLosingStreak": 3
+          },
+          {
+            "symbol": "SOL/USD",
+            "profit": -362.76,
+            "maxDd": 0.056782651944774706,
+            "trades": 22,
+            "wins": 9,
+            "winRate": 0.4090909090909091,
+            "avgWin": 36.39910583441452,
+            "avgLoss": -53.10422377354943,
+            "worst": {
+              "symbol": "SOL/USD",
+              "side": "LONG",
+              "pnl": -146.58277787007455,
+              "ret": -0.014668260464012728,
+              "reason": "trail"
+            },
+            "longestLosingStreak": 8
+          },
+          {
+            "symbol": "BNB/USD",
+            "profit": -278.81,
+            "maxDd": 0.04434297267692843,
+            "trades": 24,
+            "wins": 12,
+            "winRate": 0.5,
+            "avgWin": 35.914333265175635,
+            "avgLoss": -59.14844116243739,
+            "worst": {
+              "symbol": "BNB/USD",
+              "side": "LONG",
+              "pnl": -154.97557128894047,
+              "ret": -0.015364884647864653,
+              "reason": "trail"
+            },
+            "longestLosingStreak": 6
+          },
+          {
+            "symbol": "XRP/USD",
+            "profit": -339.55,
+            "maxDd": 0.03808638483233143,
+            "trades": 28,
+            "wins": 11,
+            "winRate": 0.39285714285714285,
+            "avgWin": 38.28813444991434,
+            "avgLoss": -44.74845776120571,
+            "worst": {
+              "symbol": "XRP/USD",
+              "side": "LONG",
+              "pnl": -105.94557901576583,
+              "ret": -0.010659608372002902,
+              "reason": "ema9"
+            },
+            "longestLosingStreak": 5
+          }
+        ]
+      },
+      "folds": [
+        {
+          "from": "2025-08-16",
+          "to": "2025-10-03",
+          "profit": -64.05,
+          "trades": 7,
+          "maxDd": 0.0031706601908023002
+        },
+        {
+          "from": "2025-10-03",
+          "to": "2025-11-20",
+          "profit": -292.61,
+          "trades": 7,
+          "maxDd": 0.007488457420755655
+        },
+        {
+          "from": "2025-11-20",
+          "to": "2026-01-07",
+          "profit": 111.77,
+          "trades": 6,
+          "maxDd": 0.0012094998815175132
+        },
+        {
+          "from": "2026-01-07",
+          "to": "2026-02-24",
+          "profit": -186.93,
+          "trades": 4,
+          "maxDd": 0.00476200725735016
+        }
+      ],
+      "fullTrades": {
+        "ETH/USD": 18,
+        "SOL/USD": 22,
+        "BNB/USD": 24,
+        "XRP/USD": 28
+      }
+    },
+    "dailyCommonLab": {
+      "name": "Quantum daily",
+      "coins": [
+        "ETH/USD",
+        "SOL/USD"
+      ],
+      "costName": "lab",
+      "train": {
+        "profit": 145.87,
+        "maxDd": 0.02275164929174768,
+        "trades": 24,
+        "winRate": 0.9583333333333334,
+        "avgWin": 19.996726056509452,
+        "avgLoss": -314.053041207547,
+        "worst": {
+          "symbol": "SOL/USD",
+          "side": "SHORT",
+          "pnl": -314.053041207547,
+          "ret": -0.03121791650948913,
+          "reason": "cross"
+        },
+        "longestLosingStreak": 1,
+        "exits": {
+          "tp": 23,
+          "sl": 0,
+          "trail": 0,
+          "spike": 0,
+          "ema9": 0,
+          "volume": 0,
+          "cross": 1,
+          "flatten": 0
+        },
+        "signalTies": 0,
+        "fallbackDays": 0,
+        "shortDays": 0,
+        "buyHold": -8943.25,
+        "coins": [
+          {
+            "symbol": "ETH/USD",
+            "profit": 242.79,
+            "maxDd": 0.03506854610713268,
+            "trades": 12,
+            "wins": 12,
+            "winRate": 1,
+            "avgWin": 20.23210783560307,
+            "avgLoss": null,
+            "worst": {
+              "symbol": "ETH/USD",
+              "side": "LONG",
+              "pnl": 19.885152398801953,
+              "ret": 0.0019885152398801953,
+              "reason": "tp"
+            },
+            "longestLosingStreak": 0
+          },
+          {
+            "symbol": "SOL/USD",
+            "profit": -96.91,
+            "maxDd": 0.04664364706810351,
+            "trades": 12,
+            "wins": 11,
+            "winRate": 0.9166666666666666,
+            "avgWin": 19.739945933861865,
+            "avgLoss": -314.053041207547,
+            "worst": {
+              "symbol": "SOL/USD",
+              "side": "SHORT",
+              "pnl": -314.053041207547,
+              "ret": -0.03121791650948913,
+              "reason": "cross"
+            },
+            "longestLosingStreak": 1
+          }
+        ]
+      },
+      "holdout": {
+        "profit": 322.58,
+        "maxDd": 0.01005234175209149,
+        "trades": 16,
+        "winRate": 1,
+        "avgWin": 20.161262754711153,
+        "avgLoss": null,
+        "worst": {
+          "symbol": "ETH/USD",
+          "side": "LONG",
+          "pnl": 19.885152398801953,
+          "ret": 0.0019885152398801953,
+          "reason": "tp"
+        },
+        "longestLosingStreak": 0,
+        "exits": {
+          "tp": 16,
+          "sl": 0,
+          "trail": 0,
+          "spike": 0,
+          "ema9": 0,
+          "volume": 0,
+          "cross": 0,
+          "flatten": 0
+        },
+        "signalTies": 0,
+        "fallbackDays": 0,
+        "shortDays": 0,
+        "buyHold": -1734.93,
+        "coins": [
+          {
+            "symbol": "ETH/USD",
+            "profit": 120.66,
+            "maxDd": 0.022215116822029847,
+            "trades": 6,
+            "wins": 6,
+            "winRate": 1,
+            "avgWin": 20.11077485601051,
+            "avgLoss": null,
+            "worst": {
+              "symbol": "ETH/USD",
+              "side": "LONG",
+              "pnl": 19.885152398801953,
+              "ret": 0.0019885152398801953,
+              "reason": "tp"
+            },
+            "longestLosingStreak": 0
+          },
+          {
+            "symbol": "SOL/USD",
+            "profit": 201.92,
+            "maxDd": 0,
+            "trades": 10,
+            "wins": 10,
+            "winRate": 1,
+            "avgWin": 20.19155549393154,
+            "avgLoss": null,
+            "worst": {
+              "symbol": "SOL/USD",
+              "side": "LONG",
+              "pnl": 19.885152398804173,
+              "ret": 0.0019885152398804173,
+              "reason": "tp"
+            },
+            "longestLosingStreak": 0
+          }
+        ]
+      },
+      "full": {
+        "profit": 469.42,
+        "maxDd": 0.02275164929174768,
+        "trades": 40,
+        "winRate": 0.975,
+        "avgWin": 20.089169911510606,
+        "avgLoss": -314.053041207547,
+        "worst": {
+          "symbol": "SOL/USD",
+          "side": "SHORT",
+          "pnl": -314.053041207547,
+          "ret": -0.03121791650948913,
+          "reason": "cross"
+        },
+        "longestLosingStreak": 1,
+        "exits": {
+          "tp": 39,
+          "sl": 0,
+          "trail": 0,
+          "spike": 0,
+          "ema9": 0,
+          "volume": 0,
+          "cross": 1,
+          "flatten": 0
+        },
+        "signalTies": 0,
+        "fallbackDays": 0,
+        "shortDays": 0,
+        "buyHold": -8692.21,
+        "coins": [
+          {
+            "symbol": "ETH/USD",
+            "profit": 366.38,
+            "maxDd": 0.03506854610713268,
+            "trades": 18,
+            "wins": 18,
+            "winRate": 1,
+            "avgWin": 20.354416855289955,
+            "avgLoss": null,
+            "worst": {
+              "symbol": "ETH/USD",
+              "side": "LONG",
+              "pnl": 19.885152398801953,
+              "ret": 0.0019885152398801953,
+              "reason": "tp"
+            },
+            "longestLosingStreak": 0
+          },
+          {
+            "symbol": "SOL/USD",
+            "profit": 103.05,
+            "maxDd": 0.04664364706810351,
+            "trades": 22,
+            "wins": 21,
+            "winRate": 0.9545454545454546,
+            "avgWin": 19.86181538827116,
+            "avgLoss": -314.053041207547,
+            "worst": {
+              "symbol": "SOL/USD",
+              "side": "SHORT",
+              "pnl": -314.053041207547,
+              "ret": -0.03121791650948913,
+              "reason": "cross"
+            },
+            "longestLosingStreak": 1
+          }
+        ]
+      },
+      "folds": [
+        {
+          "from": "2025-08-16",
+          "to": "2025-10-03",
+          "profit": 80.41,
+          "trades": 4,
+          "maxDd": 0
+        },
+        {
+          "from": "2025-10-03",
+          "to": "2025-11-20",
+          "profit": 80.12,
+          "trades": 4,
+          "maxDd": 0.01623697567075251
+        },
+        {
+          "from": "2025-11-20",
+          "to": "2026-01-07",
+          "profit": 79.91,
+          "trades": 4,
+          "maxDd": 0.0012678088806912901
+        },
+        {
+          "from": "2026-01-07",
+          "to": "2026-02-24",
+          "profit": 40.27,
+          "trades": 2,
+          "maxDd": 0
+        }
+      ],
+      "fullTrades": {
+        "ETH/USD": 18,
+        "SOL/USD": 22
+      }
+    },
+    "dailyCommonBinance": {
+      "name": "Quantum daily",
+      "coins": [
+        "ETH/USD",
+        "SOL/USD"
+      ],
+      "costName": "binance-usdt-m",
+      "train": {
+        "profit": 702.64,
+        "maxDd": 0.01446971287824139,
+        "trades": 24,
+        "winRate": 0.9583333333333334,
+        "avgWin": 43.4001281070041,
+        "avgLoss": -295.5613650802325,
+        "worst": {
+          "symbol": "SOL/USD",
+          "side": "SHORT",
+          "pnl": -295.5613650802325,
+          "ret": -0.029177684796919057,
+          "reason": "cross"
+        },
+        "longestLosingStreak": 1,
+        "exits": {
+          "tp": 23,
+          "sl": 0,
+          "trail": 0,
+          "spike": 0,
+          "ema9": 0,
+          "volume": 0,
+          "cross": 1,
+          "flatten": 0
+        },
+        "signalTies": 0,
+        "fallbackDays": 0,
+        "shortDays": 0,
+        "buyHold": -8943.25,
+        "coins": [
+          {
+            "symbol": "ETH/USD",
+            "profit": 525.34,
+            "maxDd": 0.033236026256482996,
+            "trades": 12,
+            "wins": 12,
+            "winRate": 1,
+            "avgWin": 43.7782025779228,
+            "avgLoss": null,
+            "worst": {
+              "symbol": "ETH/USD",
+              "side": "LONG",
+              "pnl": 41.319823374952676,
+              "ret": 0.0040966005000000255,
+              "reason": "tp"
+            },
+            "longestLosingStreak": 0
+          },
+          {
+            "symbol": "SOL/USD",
+            "profit": 177.3,
+            "maxDd": 0.033970413230694343,
+            "trades": 12,
+            "wins": 11,
+            "winRate": 0.9166666666666666,
+            "avgWin": 42.98768322963825,
+            "avgLoss": -295.5613650802325,
+            "worst": {
+              "symbol": "SOL/USD",
+              "side": "SHORT",
+              "pnl": -295.5613650802325,
+              "ret": -0.029177684796919057,
+              "reason": "cross"
+            },
+            "longestLosingStreak": 1
+          }
+        ]
+      },
+      "holdout": {
+        "profit": 703.78,
+        "maxDd": 0.007763357137969163,
+        "trades": 16,
+        "winRate": 1,
+        "avgWin": 43.98651011784517,
+        "avgLoss": null,
+        "worst": {
+          "symbol": "ETH/USD",
+          "side": "LONG",
+          "pnl": 42.96600500000025,
+          "ret": 0.004296600500000025,
+          "reason": "tp"
+        },
+        "longestLosingStreak": 0,
+        "exits": {
+          "tp": 16,
+          "sl": 0,
+          "trail": 0,
+          "spike": 0,
+          "ema9": 0,
+          "volume": 0,
+          "cross": 0,
+          "flatten": 0
+        },
+        "signalTies": 0,
+        "fallbackDays": 0,
+        "shortDays": 0,
+        "buyHold": -1734.93,
+        "coins": [
+          {
+            "symbol": "ETH/USD",
+            "profit": 264.42,
+            "maxDd": 0.020056854720837597,
+            "trades": 6,
+            "wins": 6,
+            "winRate": 1,
+            "avgWin": 44.069334216103464,
+            "avgLoss": null,
+            "worst": {
+              "symbol": "ETH/USD",
+              "side": "LONG",
+              "pnl": 42.96600500000025,
+              "ret": 0.004296600500000025,
+              "reason": "tp"
+            },
+            "longestLosingStreak": 0
+          },
+          {
+            "symbol": "SOL/USD",
+            "profit": 439.37,
+            "maxDd": 0,
+            "trades": 10,
+            "wins": 10,
+            "winRate": 1,
+            "avgWin": 43.936815658890175,
+            "avgLoss": null,
+            "worst": {
+              "symbol": "SOL/USD",
+              "side": "LONG",
+              "pnl": 42.96600500000025,
+              "ret": 0.004296600500000025,
+              "reason": "tp"
+            },
+            "longestLosingStreak": 0
+          }
+        ]
+      },
+      "full": {
+        "profit": 1428.11,
+        "maxDd": 0.01446971287824139,
+        "trades": 40,
+        "winRate": 0.975,
+        "avgWin": 44.196616233773284,
+        "avgLoss": -295.5613650802325,
+        "worst": {
+          "symbol": "SOL/USD",
+          "side": "SHORT",
+          "pnl": -295.5613650802325,
+          "ret": -0.029177684796919057,
+          "reason": "cross"
+        },
+        "longestLosingStreak": 1,
+        "exits": {
+          "tp": 39,
+          "sl": 0,
+          "trail": 0,
+          "spike": 0,
+          "ema9": 0,
+          "volume": 0,
+          "cross": 1,
+          "flatten": 0
+        },
+        "signalTies": 0,
+        "fallbackDays": 0,
+        "shortDays": 0,
+        "buyHold": -8692.21,
+        "coins": [
+          {
+            "symbol": "ETH/USD",
+            "profit": 803.65,
+            "maxDd": 0.033236026256482996,
+            "trades": 18,
+            "wins": 18,
+            "winRate": 1,
+            "avgWin": 44.64695695363105,
+            "avgLoss": null,
+            "worst": {
+              "symbol": "ETH/USD",
+              "side": "LONG",
+              "pnl": 41.319823374952676,
+              "ret": 0.0040966005000000255,
+              "reason": "tp"
+            },
+            "longestLosingStreak": 0
+          },
+          {
+            "symbol": "SOL/USD",
+            "profit": 624.46,
+            "maxDd": 0.033970413230694343,
+            "trades": 22,
+            "wins": 21,
+            "winRate": 0.9545454545454546,
+            "avgWin": 43.81060990246664,
+            "avgLoss": -295.5613650802325,
+            "worst": {
+              "symbol": "SOL/USD",
+              "side": "SHORT",
+              "pnl": -295.5613650802325,
+              "ret": -0.029177684796919057,
+              "reason": "cross"
+            },
+            "longestLosingStreak": 1
+          }
+        ]
+      },
+      "folds": [
+        {
+          "from": "2025-08-16",
+          "to": "2025-10-03",
+          "profit": 173.18,
+          "trades": 4,
+          "maxDd": 0
+        },
+        {
+          "from": "2025-10-03",
+          "to": "2025-11-20",
+          "profit": 170.73,
+          "trades": 4,
+          "maxDd": 0.014366740826420574
+        },
+        {
+          "from": "2025-11-20",
+          "to": "2026-01-07",
+          "profit": 171.66,
+          "trades": 4,
+          "maxDd": 0.0003177974666622543
+        },
+        {
+          "from": "2026-01-07",
+          "to": "2026-02-24",
+          "profit": 86.43,
+          "trades": 2,
+          "maxDd": 0
+        }
+      ],
+      "fullTrades": {
+        "ETH/USD": 18,
+        "SOL/USD": 22
+      }
+    },
+    "dailyOwnLab": {
+      "name": "Quantum daily",
+      "coins": [
+        "ETH/USD",
+        "SOL/USD",
+        "BNB/USD",
+        "XRP/USD"
+      ],
+      "costName": "lab",
+      "train": {
+        "profit": -2039.56,
+        "maxDd": 0.05909191240692166,
+        "trades": 50,
+        "winRate": 0.9,
+        "avgWin": 19.4711420054389,
+        "avgLoss": -583.15268801977,
+        "worst": {
+          "symbol": "XRP/USD",
+          "side": "SHORT",
+          "pnl": -896.7810600958165,
+          "ret": -0.08914301913370426,
+          "reason": "cross"
+        },
+        "longestLosingStreak": 2,
+        "exits": {
+          "tp": 45,
+          "sl": 1,
+          "trail": 0,
+          "spike": 0,
+          "ema9": 0,
+          "volume": 0,
+          "cross": 4,
+          "flatten": 0
+        },
+        "signalTies": 0,
+        "fallbackDays": 0,
+        "shortDays": 0,
+        "buyHold": -12939.06,
+        "coins": [
+          {
+            "symbol": "ETH/USD",
+            "profit": 242.79,
+            "maxDd": 0.03506854610713268,
+            "trades": 12,
+            "wins": 12,
+            "winRate": 1,
+            "avgWin": 20.23210783560307,
+            "avgLoss": null,
+            "worst": {
+              "symbol": "ETH/USD",
+              "side": "LONG",
+              "pnl": 19.885152398801953,
+              "ret": 0.0019885152398801953,
+              "reason": "tp"
+            },
+            "longestLosingStreak": 0
+          },
+          {
+            "symbol": "SOL/USD",
+            "profit": -96.91,
+            "maxDd": 0.04664364706810351,
+            "trades": 12,
+            "wins": 11,
+            "winRate": 0.9166666666666666,
+            "avgWin": 19.739945933861865,
+            "avgLoss": -314.053041207547,
+            "worst": {
+              "symbol": "SOL/USD",
+              "side": "SHORT",
+              "pnl": -314.053041207547,
+              "ret": -0.03121791650948913,
+              "reason": "cross"
+            },
+            "longestLosingStreak": 1
+          },
+          {
+            "symbol": "BNB/USD",
+            "profit": -1533.7,
+            "maxDd": 0.1651240444899614,
+            "trades": 12,
+            "wins": 9,
+            "winRate": 0.75,
+            "avgWin": 19.02565186695881,
+            "avgLoss": -568.3097795984957,
+            "worst": {
+              "symbol": "BNB/USD",
+              "side": "SHORT",
+              "pnl": -871.1304235327204,
+              "ret": -0.09363318386261399,
+              "reason": "sl"
+            },
+            "longestLosingStreak": 2
+          },
+          {
+            "symbol": "XRP/USD",
+            "profit": -651.74,
+            "maxDd": 0.1024699878983983,
+            "trades": 14,
+            "wins": 13,
+            "winRate": 0.9285714285714286,
+            "avgWin": 18.84967878018489,
+            "avgLoss": -896.7810600958165,
+            "worst": {
+              "symbol": "XRP/USD",
+              "side": "SHORT",
+              "pnl": -896.7810600958165,
+              "ret": -0.08914301913370426,
+              "reason": "cross"
+            },
+            "longestLosingStreak": 1
+          }
+        ]
+      },
+      "holdout": {
+        "profit": -2732.01,
+        "maxDd": 0.07472779367325914,
+        "trades": 41,
+        "winRate": 0.8536585365853658,
+        "avgWin": 19.46020118169306,
+        "avgLoss": -568.8529952619391,
+        "worst": {
+          "symbol": "BNB/USD",
+          "side": "LONG",
+          "pnl": -920.6739439042757,
+          "ret": -0.10269685202398782,
+          "reason": "sl"
+        },
+        "longestLosingStreak": 1,
+        "exits": {
+          "tp": 35,
+          "sl": 2,
+          "trail": 0,
+          "spike": 0,
+          "ema9": 0,
+          "volume": 0,
+          "cross": 4,
+          "flatten": 0
+        },
+        "signalTies": 0,
+        "fallbackDays": 0,
+        "shortDays": 0,
+        "buyHold": -4675.89,
+        "coins": [
+          {
+            "symbol": "ETH/USD",
+            "profit": 120.66,
+            "maxDd": 0.022215116822029847,
+            "trades": 6,
+            "wins": 6,
+            "winRate": 1,
+            "avgWin": 20.11077485601051,
+            "avgLoss": null,
+            "worst": {
+              "symbol": "ETH/USD",
+              "side": "LONG",
+              "pnl": 19.885152398801953,
+              "ret": 0.0019885152398801953,
+              "reason": "tp"
+            },
+            "longestLosingStreak": 0
+          },
+          {
+            "symbol": "SOL/USD",
+            "profit": 201.92,
+            "maxDd": 0,
+            "trades": 10,
+            "wins": 10,
+            "winRate": 1,
+            "avgWin": 20.19155549393154,
+            "avgLoss": null,
+            "worst": {
+              "symbol": "SOL/USD",
+              "side": "LONG",
+              "pnl": 19.885152398804173,
+              "ret": 0.0019885152398804173,
+              "reason": "tp"
+            },
+            "longestLosingStreak": 0
+          },
+          {
+            "symbol": "BNB/USD",
+            "profit": -1939.51,
+            "maxDd": 0.20037047052284307,
+            "trades": 12,
+            "wins": 9,
+            "winRate": 0.75,
+            "avgWin": 18.566235665434483,
+            "avgLoss": -702.2016071596873,
+            "worst": {
+              "symbol": "BNB/USD",
+              "side": "LONG",
+              "pnl": -920.6739439042757,
+              "ret": -0.10269685202398782,
+              "reason": "sl"
+            },
+            "longestLosingStreak": 1
+          },
+          {
+            "symbol": "XRP/USD",
+            "profit": -1115.08,
+            "maxDd": 0.12504881444178836,
+            "trades": 13,
+            "wins": 10,
+            "winRate": 0.7692307692307693,
+            "avgWin": 19.14307162949681,
+            "avgLoss": -435.5043833641909,
+            "worst": {
+              "symbol": "XRP/USD",
+              "side": "SHORT",
+              "pnl": -713.3742149451094,
+              "ret": -0.07459857215037746,
+              "reason": "cross"
+            },
+            "longestLosingStreak": 1
+          }
+        ]
+      },
+      "full": {
+        "profit": -4400.46,
+        "maxDd": 0.11346238212422662,
+        "trades": 91,
+        "winRate": 0.8791208791208791,
+        "avgWin": 19.002217924110496,
+        "avgLoss": -538.2401533159801,
+        "worst": {
+          "symbol": "XRP/USD",
+          "side": "SHORT",
+          "pnl": -896.7810600958165,
+          "ret": -0.08914301913370426,
+          "reason": "cross"
+        },
+        "longestLosingStreak": 2,
+        "exits": {
+          "tp": 80,
+          "sl": 3,
+          "trail": 0,
+          "spike": 0,
+          "ema9": 0,
+          "volume": 0,
+          "cross": 8,
+          "flatten": 0
+        },
+        "signalTies": 0,
+        "fallbackDays": 0,
+        "shortDays": 0,
+        "buyHold": -13322.91,
+        "coins": [
+          {
+            "symbol": "ETH/USD",
+            "profit": 366.38,
+            "maxDd": 0.03506854610713268,
+            "trades": 18,
+            "wins": 18,
+            "winRate": 1,
+            "avgWin": 20.354416855289955,
+            "avgLoss": null,
+            "worst": {
+              "symbol": "ETH/USD",
+              "side": "LONG",
+              "pnl": 19.885152398801953,
+              "ret": 0.0019885152398801953,
+              "reason": "tp"
+            },
+            "longestLosingStreak": 0
+          },
+          {
+            "symbol": "SOL/USD",
+            "profit": 103.05,
+            "maxDd": 0.04664364706810351,
+            "trades": 22,
+            "wins": 21,
+            "winRate": 0.9545454545454546,
+            "avgWin": 19.86181538827116,
+            "avgLoss": -314.053041207547,
+            "worst": {
+              "symbol": "SOL/USD",
+              "side": "SHORT",
+              "pnl": -314.053041207547,
+              "ret": -0.03121791650948913,
+              "reason": "cross"
+            },
+            "longestLosingStreak": 1
+          },
+          {
+            "symbol": "BNB/USD",
+            "profit": -3175.75,
+            "maxDd": 0.3257107890502632,
+            "trades": 24,
+            "wins": 18,
+            "winRate": 0.75,
+            "avgWin": 17.372193402659843,
+            "avgLoss": -581.4074167825046,
+            "worst": {
+              "symbol": "BNB/USD",
+              "side": "SHORT",
+              "pnl": -871.1304235327204,
+              "ret": -0.09363318386261399,
+              "reason": "sl"
+            },
+            "longestLosingStreak": 2
+          },
+          {
+            "symbol": "XRP/USD",
+            "profit": -1694.14,
+            "maxDd": 0.18207246617853837,
+            "trades": 27,
+            "wins": 23,
+            "winRate": 0.8518518518518519,
+            "avgWin": 18.434796788349928,
+            "avgLoss": -529.5360361433017,
+            "worst": {
+              "symbol": "XRP/USD",
+              "side": "SHORT",
+              "pnl": -896.7810600958165,
+              "ret": -0.08914301913370426,
+              "reason": "cross"
+            },
+            "longestLosingStreak": 1
+          }
+        ]
+      },
+      "folds": [
+        {
+          "from": "2025-08-16",
+          "to": "2025-10-03",
+          "profit": 140.69,
+          "trades": 7,
+          "maxDd": 0
+        },
+        {
+          "from": "2025-10-03",
+          "to": "2025-11-20",
+          "profit": -816.15,
+          "trades": 7,
+          "maxDd": 0.023338174934322314
+        },
+        {
+          "from": "2025-11-20",
+          "to": "2026-01-07",
+          "profit": 119.68,
+          "trades": 6,
+          "maxDd": 0.0006345386738870955
+        },
+        {
+          "from": "2026-01-07",
+          "to": "2026-02-24",
+          "profit": 80.54,
+          "trades": 4,
+          "maxDd": 0
+        }
+      ],
+      "fullTrades": {
+        "ETH/USD": 18,
+        "SOL/USD": 22,
+        "BNB/USD": 24,
+        "XRP/USD": 27
+      }
+    },
+    "dailyOwnBinance": {
+      "name": "Quantum daily",
+      "coins": [
+        "ETH/USD",
+        "SOL/USD",
+        "BNB/USD",
+        "XRP/USD"
+      ],
+      "costName": "binance-usdt-m",
+      "train": {
+        "profit": -958.51,
+        "maxDd": 0.041758636242143723,
+        "trades": 50,
+        "winRate": 0.9,
+        "avgWin": 41.99262855532893,
+        "avgLoss": -569.6353185717786,
+        "worst": {
+          "symbol": "XRP/USD",
+          "side": "SHORT",
+          "pnl": -883.5007615535612,
+          "ret": -0.08721879712339929,
+          "reason": "cross"
+        },
+        "longestLosingStreak": 2,
+        "exits": {
+          "tp": 45,
+          "sl": 1,
+          "trail": 0,
+          "spike": 0,
+          "ema9": 0,
+          "volume": 0,
+          "cross": 4,
+          "flatten": 0
+        },
+        "signalTies": 0,
+        "fallbackDays": 0,
+        "shortDays": 0,
+        "buyHold": -12939.06,
+        "coins": [
+          {
+            "symbol": "ETH/USD",
+            "profit": 525.34,
+            "maxDd": 0.033236026256482996,
+            "trades": 12,
+            "wins": 12,
+            "winRate": 1,
+            "avgWin": 43.7782025779228,
+            "avgLoss": null,
+            "worst": {
+              "symbol": "ETH/USD",
+              "side": "LONG",
+              "pnl": 41.319823374952676,
+              "ret": 0.0040966005000000255,
+              "reason": "tp"
+            },
+            "longestLosingStreak": 0
+          },
+          {
+            "symbol": "SOL/USD",
+            "profit": 177.3,
+            "maxDd": 0.033970413230694343,
+            "trades": 12,
+            "wins": 11,
+            "winRate": 0.9166666666666666,
+            "avgWin": 42.98768322963825,
+            "avgLoss": -295.5613650802325,
+            "worst": {
+              "symbol": "SOL/USD",
+              "side": "SHORT",
+              "pnl": -295.5613650802325,
+              "ret": -0.029177684796919057,
+              "reason": "cross"
+            },
+            "longestLosingStreak": 1
+          },
+          {
+            "symbol": "BNB/USD",
+            "profit": -1312.64,
+            "maxDd": 0.1556674180073204,
+            "trades": 12,
+            "wins": 9,
+            "winRate": 0.75,
+            "avgWin": 39.60797452300907,
+            "avgLoss": -556.3714887416996,
+            "worst": {
+              "symbol": "BNB/USD",
+              "side": "SHORT",
+              "pnl": -865.559783132663,
+              "ret": -0.0913179545454545,
+              "reason": "sl"
+            },
+            "longestLosingStreak": 2
+          },
+          {
+            "symbol": "XRP/USD",
+            "profit": -348.51,
+            "maxDd": 0.08721879712339932,
+            "trades": 14,
+            "wins": 13,
+            "winRate": 0.9285714285714286,
+            "avgWin": 41.15335137089432,
+            "avgLoss": -883.5007615535612,
+            "worst": {
+              "symbol": "XRP/USD",
+              "side": "SHORT",
+              "pnl": -883.5007615535612,
+              "ret": -0.08721879712339929,
+              "reason": "cross"
+            },
+            "longestLosingStreak": 1
+          }
+        ]
+      },
+      "holdout": {
+        "profit": -1860.04,
+        "maxDd": 0.06062803386741431,
+        "trades": 41,
+        "winRate": 0.8536585365853658,
+        "avgWin": 42.456603798431864,
+        "avgLoss": -557.6707610734935,
+        "worst": {
+          "symbol": "BNB/USD",
+          "side": "LONG",
+          "pnl": -925.4411448864739,
+          "ret": -0.1008997749999998,
+          "reason": "sl"
+        },
+        "longestLosingStreak": 1,
+        "exits": {
+          "tp": 35,
+          "sl": 2,
+          "trail": 0,
+          "spike": 0,
+          "ema9": 0,
+          "volume": 0,
+          "cross": 4,
+          "flatten": 0
+        },
+        "signalTies": 0,
+        "fallbackDays": 0,
+        "shortDays": 0,
+        "buyHold": -4675.89,
+        "coins": [
+          {
+            "symbol": "ETH/USD",
+            "profit": 264.42,
+            "maxDd": 0.020056854720837597,
+            "trades": 6,
+            "wins": 6,
+            "winRate": 1,
+            "avgWin": 44.069334216103464,
+            "avgLoss": null,
+            "worst": {
+              "symbol": "ETH/USD",
+              "side": "LONG",
+              "pnl": 42.96600500000025,
+              "ret": 0.004296600500000025,
+              "reason": "tp"
+            },
+            "longestLosingStreak": 0
+          },
+          {
+            "symbol": "SOL/USD",
+            "profit": 439.37,
+            "maxDd": 0,
+            "trades": 10,
+            "wins": 10,
+            "winRate": 1,
+            "avgWin": 43.936815658890175,
+            "avgLoss": null,
+            "worst": {
+              "symbol": "SOL/USD",
+              "side": "LONG",
+              "pnl": 42.96600500000025,
+              "ret": 0.004296600500000025,
+              "reason": "tp"
+            },
+            "longestLosingStreak": 0
+          },
+          {
+            "symbol": "BNB/USD",
+            "profit": -1717.92,
+            "maxDd": 0.18591476622020728,
+            "trades": 12,
+            "wins": 9,
+            "winRate": 0.75,
+            "avgWin": 40.468668630115864,
+            "avgLoss": -694.0451052182625,
+            "worst": {
+              "symbol": "BNB/USD",
+              "side": "LONG",
+              "pnl": -925.4411448864739,
+              "ret": -0.1008997749999998,
+              "reason": "sl"
+            },
+            "longestLosingStreak": 1
+          },
+          {
+            "symbol": "XRP/USD",
+            "profit": -845.91,
+            "maxDd": 0.10503590358994037,
+            "trades": 13,
+            "wins": 10,
+            "winRate": 0.7692307692307693,
+            "avgWin": 41.797895338855,
+            "avgLoss": -421.29641692872445,
+            "worst": {
+              "symbol": "XRP/USD",
+              "side": "SHORT",
+              "pnl": -710.9539356111472,
+              "ret": -0.07264522119790905,
+              "reason": "cross"
+            },
+            "longestLosingStreak": 1
+          }
+        ]
+      },
+      "full": {
+        "profit": -2541.89,
+        "maxDd": 0.0713281945119093,
+        "trades": 91,
+        "winRate": 0.8791208791208791,
+        "avgWin": 41.68693329312273,
+        "avgLoss": -534.2585216713159,
+        "worst": {
+          "symbol": "XRP/USD",
+          "side": "SHORT",
+          "pnl": -883.5007615535612,
+          "ret": -0.08721879712339929,
+          "reason": "cross"
+        },
+        "longestLosingStreak": 2,
+        "exits": {
+          "tp": 80,
+          "sl": 3,
+          "trail": 0,
+          "spike": 0,
+          "ema9": 0,
+          "volume": 0,
+          "cross": 8,
+          "flatten": 0
+        },
+        "signalTies": 0,
+        "fallbackDays": 0,
+        "shortDays": 0,
+        "buyHold": -13322.91,
+        "coins": [
+          {
+            "symbol": "ETH/USD",
+            "profit": 803.65,
+            "maxDd": 0.033236026256482996,
+            "trades": 18,
+            "wins": 18,
+            "winRate": 1,
+            "avgWin": 44.64695695363105,
+            "avgLoss": null,
+            "worst": {
+              "symbol": "ETH/USD",
+              "side": "LONG",
+              "pnl": 41.319823374952676,
+              "ret": 0.0040966005000000255,
+              "reason": "tp"
+            },
+            "longestLosingStreak": 0
+          },
+          {
+            "symbol": "SOL/USD",
+            "profit": 624.46,
+            "maxDd": 0.033970413230694343,
+            "trades": 22,
+            "wins": 21,
+            "winRate": 0.9545454545454546,
+            "avgWin": 43.81060990246664,
+            "avgLoss": -295.5613650802325,
+            "worst": {
+              "symbol": "SOL/USD",
+              "side": "SHORT",
+              "pnl": -295.5613650802325,
+              "ret": -0.029177684796919057,
+              "reason": "cross"
+            },
+            "longestLosingStreak": 1
+          },
+          {
+            "symbol": "BNB/USD",
+            "profit": -2805.06,
+            "maxDd": 0.2977122321293113,
+            "trades": 24,
+            "wins": 18,
+            "winRate": 0.75,
+            "avgWin": 37.38227646282943,
+            "avgLoss": -579.6566350937419,
+            "worst": {
+              "symbol": "BNB/USD",
+              "side": "SHORT",
+              "pnl": -865.559783132663,
+              "ret": -0.0913179545454545,
+              "reason": "sl"
+            },
+            "longestLosingStreak": 2
+          },
+          {
+            "symbol": "XRP/USD",
+            "profit": -1164.94,
+            "maxDd": 0.13622604616301023,
+            "trades": 27,
+            "wins": 23,
+            "winRate": 0.8518518518518519,
+            "avgWin": 40.80024582616221,
+            "avgLoss": -525.8356406854476,
+            "worst": {
+              "symbol": "XRP/USD",
+              "side": "SHORT",
+              "pnl": -883.5007615535612,
+              "ret": -0.08721879712339929,
+              "reason": "cross"
+            },
+            "longestLosingStreak": 1
+          }
+        ]
+      },
+      "folds": [
+        {
+          "from": "2025-08-16",
+          "to": "2025-10-03",
+          "profit": 303.14,
+          "trades": 7,
+          "maxDd": 0
+        },
+        {
+          "from": "2025-10-03",
+          "to": "2025-11-20",
+          "profit": -657.09,
+          "trades": 7,
+          "maxDd": 0.022684256446755837
+        },
+        {
+          "from": "2025-11-20",
+          "to": "2026-01-07",
+          "profit": 257.6,
+          "trades": 6,
+          "maxDd": 0.00015924109133669137
+        },
+        {
+          "from": "2026-01-07",
+          "to": "2026-02-24",
+          "profit": 172.87,
+          "trades": 4,
+          "maxDd": 0
+        }
+      ],
+      "fullTrades": {
+        "ETH/USD": 18,
+        "SOL/USD": 22,
+        "BNB/USD": 24,
+        "XRP/USD": 27
+      }
+    }
+  }
+}
