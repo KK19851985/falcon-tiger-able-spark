@@ -61,17 +61,18 @@ export const COINS = [
 
 export type CoinName = (typeof COINS)[number];
 
-export const INSTRUMENTS: Record<CoinName, string> = {
-  "BTC/USD": "BTC-USDT",
-  "ETH/USD": "ETH-USDT",
-  "SOL/USD": "SOL-USDT",
-  "BNB/USD": "BNB-USDT",
-  "XRP/USD": "XRP-USDT",
-  "DOGE/USD": "DOGE-USDT",
-  "ADA/USD": "ADA-USDT",
-  "AVAX/USD": "AVAX-USDT",
-  "LINK/USD": "LINK-USDT",
-  "LTC/USD": "LTC-USDT",
+/** Binance USDT-M perpetual symbols. Prices come from these contracts only. */
+export const BINANCE_UM: Record<CoinName, string> = {
+  "BTC/USD": "BTCUSDT",
+  "ETH/USD": "ETHUSDT",
+  "SOL/USD": "SOLUSDT",
+  "BNB/USD": "BNBUSDT",
+  "XRP/USD": "XRPUSDT",
+  "DOGE/USD": "DOGEUSDT",
+  "ADA/USD": "ADAUSDT",
+  "AVAX/USD": "AVAXUSDT",
+  "LINK/USD": "LINKUSDT",
+  "LTC/USD": "LTCUSDT",
 };
 
 export type Spec = {

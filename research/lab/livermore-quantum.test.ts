@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { LAB_QUANTUM_COST } from "./quantum.ts";
 import type { Bar } from "./types.ts";
+import { archiveMonths, parseKlineCsv } from "./fetch-livermore.ts";
 import {
   CURRENT_SPEC,
   OLD_SPEC,
@@ -45,6 +46,20 @@ function spec(over: Partial<Spec> = {}): Spec {
     ...over,
   };
 }
+
+describe("Binance archive", () => {
+  it("reads a closed 15-minute kline and skips the header", () => {
+    const bars = parseKlineCsv(
+      "open_time,open,high,low,close,volume,close_time\n1761955200000,10,12,9,11,4,1761956099999\n",
+    );
+    assert.equal(bars.length, 1);
+    assert.equal(bars[0]!.t, 1761955200000);
+    assert.equal(bars[0]!.close, 11);
+    assert.equal(bars[0]!.volume, 4);
+    assert.deepEqual(archiveMonths().slice(0, 2), ["2025-11", "2025-12"]);
+    assert.equal(archiveMonths().at(-1), "2026-10");
+  });
+});
 
 describe("Quantum Livermore rules", () => {
   it("keeps a long only when the close is above a rising EMA and the slope clears the flat band", () => {

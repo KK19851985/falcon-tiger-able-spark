@@ -71,7 +71,7 @@ const RESULT = path.join(path.dirname(PATHS.cache), "livermore-sweep-result.json
 const BLOCK = 96 * 10;
 const REGIME = 96 * 20;
 const ASSUMPTIONS = [
-  "Prices are OKX spot 15-minute candles, confirmed bars only, base-asset volume. Binance spot and Binance USDT-M were probed without a key and were not used for prices.",
+  "Prices are Binance USDT-M 15-minute klines from the public archive at data.binance.vision, futures/um, base-asset volume, no API key. api.binance.com and fapi.binance.com return HTTP 451 from this location, so the REST kline routes were not used.",
   "The book trades the close of each 15-minute bar. A signal on that close fills at the next bar's open. Each window starts flat, with no pending confirmation carried in, and a position still open on the last bar is flattened at that close.",
   "Slope is the EMA's change over ma_slope_bars, divided by the EMA at the start of the window. Long requires the close above the EMA and a slope at least flat_slope_pct. Short is the mirror. A zero threshold still requires the EMA to be rising or falling. A close that crosses or lands on the EMA inside the last tangle_bars bars, including the current bar, stays flat. tangle_bars 0 turns that off.",
   "A swing high is strictly above the pivot_wing bars on each side. A swing low is strictly below them. At bar i the usable swings are those centered from i - pivot_lookback through i - pivot_wing. Highs and lows cluster separately. A price joins a cluster when it is within touch_tolerance_pct of that cluster's lowest price, and the level is the mean. min_touches 1 keeps every swing.",
