@@ -214,6 +214,19 @@ describe("execution", () => {
     assert.ok(run.profit < 1000);
     assert.ok(run.profit > 900);
   });
+
+  it("keeps the taker formula when funding is off, and longs pay the daily funding", () => {
+    const costs = { fee: 0.001, slippage: 0.0005 };
+    const plain = netReturn("LONG", 100, 110, costs);
+    assert.ok(Math.abs(plain - netReturn("LONG", 100, 110, costs, 4)) < 1e-12);
+    const funded = netReturn("LONG", 100, 110, { ...costs, fundingPerDay: 0.0001 }, 2);
+    assert.ok(Math.abs(funded - (plain - 0.0002)) < 1e-12);
+    const shortBase = netReturn("SHORT", 110, 100, { fee: 0, slippage: 0 });
+    const shortFunded = netReturn("SHORT", 110, 100, { fee: 0, slippage: 0, fundingPerDay: 0.0001 }, 2);
+    assert.ok(Math.abs(shortFunded - (shortBase + 0.0002)) < 1e-12);
+    assert.ok(shortFunded > shortBase);
+    assert.ok(funded < plain);
+  });
 });
 
 describe("triggers", () => {
@@ -331,6 +344,29 @@ describe("skeptic", () => {
     assert.equal(crowded.clears, false);
     assert.ok(Math.abs(normInv(0.975) - 1.95996398454) < 1e-8);
     assert.ok(Math.abs(normInv(0.5)) < 1e-12);
+  });
+
+  it("counts only the coins a comparison names", () => {
+    const champion = fakeBook(100, 0.3, 40, 0);
+    const challenger = fakeBook(180, 0.2, 40, 0.2);
+    challenger.fullTrades["BTC/USD"] = 0;
+    const ignored = judge(
+      {
+        champion,
+        challenger,
+        neighbors: beatingNeighbors(100),
+        priorHoldoutSharpes: [],
+        symbols: ["ETH/USD", "SOL/USD"],
+      },
+      silent,
+    );
+    assert.equal(ignored.verdict, "ACCEPT");
+    assert.equal(ignored.gates.find((gate) => gate.name === "trades")!.detail.includes("BTC/USD"), false);
+    const counted = judge(
+      { champion, challenger, neighbors: beatingNeighbors(100), priorHoldoutSharpes: [] },
+      silent,
+    );
+    assert.equal(counted.verdict, "INSUFFICIENT");
   });
 });
 
