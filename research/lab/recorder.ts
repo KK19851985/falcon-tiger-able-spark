@@ -47,15 +47,26 @@ export function readLedger(file = PATHS.ledger): LedgerRow[] {
     });
 }
 
+export type AppendOptions = {
+  /** An ACCEPT writes candidate.json unless this is false. Default true. */
+  writeCandidate?: boolean;
+};
+
 /** Append one cycle. Existing lines are left byte-for-byte. */
-export function appendCycle(row: LedgerRow, paths: RecorderPaths = PATHS, log: Logger = console.log): void {
+export function appendCycle(
+  row: LedgerRow,
+  paths: RecorderPaths = PATHS,
+  log: Logger = console.log,
+  options: AppendOptions = {},
+): void {
   mkdirSync(path.dirname(paths.ledger), { recursive: true });
   mkdirSync(path.dirname(paths.markdown), { recursive: true });
   appendFileSync(paths.ledger, `${JSON.stringify(row)}\n`);
   if (!existsSync(paths.markdown)) writeFileSync(paths.markdown, HEADER);
   appendFileSync(paths.markdown, markdownSection(row));
   log(`[recorder] Appended cycle ${row.cycle} (${row.verdict}) to the ledger and the readable copy.`);
-  if (row.verdict === "ACCEPT" && row.experiment && row.metrics) {
+  const writeCandidate = options.writeCandidate !== false;
+  if (writeCandidate && row.verdict === "ACCEPT" && row.experiment && row.metrics) {
     const candidate = {
       promoted: false,
       note: "Accepted on the research ledger only. This file does not change the desk. Daniel applies it by hand, or not at all.",
@@ -77,7 +88,11 @@ export function appendCycle(row: LedgerRow, paths: RecorderPaths = PATHS, log: L
     writeFileSync(paths.candidate, `${JSON.stringify(candidate, null, 2)}\n`);
     log("[recorder] Wrote research/lab/candidate.json. It is not wired into the app.");
   } else {
-    log("[recorder] Did not write a candidate. The skeptic did not accept.");
+    log(
+      writeCandidate
+        ? "[recorder] Did not write a candidate. The skeptic did not accept."
+        : "[recorder] Did not write a candidate. This cycle is not allowed to write one.",
+    );
   }
 }
 
@@ -109,6 +124,7 @@ export function markdownSection(row: LedgerRow): string {
   lines.push(`- Champion: ${row.champion.label} (\`${row.champion.hash}\`).`);
   if (row.experiment) {
     lines.push(`- Experiment: ${row.experiment.label} (\`${row.experiment.hash}\`).`);
+    if (row.experiment.parameter) lines.push(`- Parameter: \`${row.experiment.parameter}\`.`);
     lines.push("");
     lines.push("### Why this experiment");
     lines.push("");
@@ -184,6 +200,12 @@ export function markdownSection(row: LedgerRow): string {
     lines.push(
       `Deflated Sharpe uses ${row.trialsCounted} trials. Daily Sharpe ${num(row.deflated.sharpe)}, hurdle ${num(row.deflated.hurdle)}, z=${num(row.deflated.z, 3)}. The z statistic is not a probability and it is not a confidence.`,
     );
+    lines.push("");
+  }
+  if (row.detail?.length) {
+    lines.push("### Cycle notes");
+    lines.push("");
+    for (const line of row.detail) lines.push(line);
     lines.push("");
   }
   if (row.study) {
