@@ -455,6 +455,19 @@ describe("recorder", () => {
     appendCycle(rejected, { ...paths, ledger: path.join(fresh, "ledger.jsonl"), markdown: path.join(fresh, "LAB.md"), candidate: path.join(fresh, "candidate.json") }, silent);
     assert.equal(existsSync(path.join(fresh, "candidate.json")), false);
     assert.match(readFileSync(paths.markdown, "utf8"), /npm run lab:cycle/);
+    const blocked = mkdtempSync(path.join(tmpdir(), "falcon-lab-"));
+    appendCycle(
+      { ...fakeRow("ACCEPT"), cycle: 9 },
+      {
+        ledger: path.join(blocked, "ledger.jsonl"),
+        markdown: path.join(blocked, "LAB.md"),
+        candidate: path.join(blocked, "candidate.json"),
+      },
+      silent,
+      { writeCandidate: false },
+    );
+    assert.equal(existsSync(path.join(blocked, "candidate.json")), false);
+    assert.match(readFileSync(path.join(blocked, "LAB.md"), "utf8"), /Cycle 9/);
   });
 });
 

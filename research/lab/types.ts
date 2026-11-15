@@ -155,6 +155,11 @@ export type ExperimentRecord = {
   to: number | string | null;
   label: string;
   reasoning: string[];
+  /**
+   * Set on a Livermore parameter cycle. The `knob` field stays a V-Pro knob
+   * because that is the search type; this name is the variable that changed.
+   */
+  parameter?: string;
 };
 
 export type NeighborScore = {
@@ -193,6 +198,14 @@ export type LedgerRow = {
     volMultiplier: number;
     confirmBars: number;
     direction: "same" | "4h";
+    maSlopeBars?: number;
+    flatSlopePct?: number;
+    tangleBars?: number;
+    pivotWing?: number;
+    touchTolerancePct?: number;
+    minTouches?: number;
+    takeProfit?: number;
+    stopLoss?: number;
   };
   data: DataManifest | null;
   champion: { config: Config; hash: string; label: string };
@@ -209,6 +222,8 @@ export type LedgerRow = {
    * Livermore validation. The desk does not read this.
    */
   study?: LongTapeStudy;
+  /** Extra markdown lines. Older rows omit this. The desk does not read it. */
+  detail?: string[];
 };
 
 export type LongTapeStudy = {

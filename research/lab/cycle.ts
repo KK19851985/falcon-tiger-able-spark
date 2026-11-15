@@ -15,8 +15,13 @@ import { LIVE_COSTS, evaluatePair, holdoutProfit } from "./tester.ts";
 import { rowTimeframe, type Knob, type LedgerRow, type Timeframe } from "./types.ts";
 
 async function main() {
-  const commit = codeCommit();
   const argv = process.argv.slice(2);
+  if (argv.includes("--livermore")) {
+    const { runLivermoreCycles } = await import("./livermore-sweep.ts");
+    await runLivermoreCycles(argv);
+    return;
+  }
+  const commit = codeCommit();
   const timeframe: Timeframe = argv.includes("--timeframe=15m") ? "15m" : "1d";
   const ledger = readLedger(PATHS.ledger);
   const track = ledger.filter(
