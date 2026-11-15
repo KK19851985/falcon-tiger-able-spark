@@ -1,7 +1,16 @@
 import { MIN_TRADES_PER_COIN } from "./constants.ts";
 import { usd } from "./format.ts";
 import { deflatedSharpe } from "./stats.ts";
-import { SYMBOLS, type DeflatedRecord, type Gate, type Logger, type NeighborScore, type SideMetrics, type Verdict } from "./types.ts";
+import {
+  SYMBOLS,
+  type DeflatedRecord,
+  type Gate,
+  type Logger,
+  type NeighborScore,
+  type SideMetrics,
+  type SymbolName,
+  type Verdict,
+} from "./types.ts";
 
 export type Judgment = {
   verdict: Verdict;
@@ -23,17 +32,24 @@ export function judge(
     neighbors: { label: string; hash: string; holdoutProfit: number }[];
     /** Holdout daily Sharpes of every earlier trial. This trial is added here. */
     priorHoldoutSharpes: number[];
+    /**
+     * Coins the 30-trade gate counts. The default is the published three.
+     * A comparison on a shared subset passes that subset and leaves the
+     * other coins out of the gate.
+     */
+    symbols?: readonly SymbolName[];
   },
   log: Logger = console.log,
 ): Judgment {
   const say = (line: string) => log(`[skeptic] ${line}`);
+  const symbols = input.symbols ?? SYMBOLS;
   const gates: Gate[] = [];
   const champ = input.champion;
   const next = input.challenger;
-  const tradeBits = SYMBOLS.map(
+  const tradeBits = symbols.map(
     (symbol) => `${symbol} ${next.fullTrades[symbol]} (champion ${champ.fullTrades[symbol]})`,
   );
-  const tradesPass = SYMBOLS.every((symbol) => next.fullTrades[symbol] >= MIN_TRADES_PER_COIN);
+  const tradesPass = symbols.every((symbol) => next.fullTrades[symbol] >= MIN_TRADES_PER_COIN);
   gates.push({
     name: "trades",
     pass: tradesPass,

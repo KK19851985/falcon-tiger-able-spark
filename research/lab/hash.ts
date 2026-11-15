@@ -45,3 +45,14 @@ export function seriesHash(series: Series): string {
 export function barCount(series: Series): number {
   return series["BTC/USD" satisfies SymbolName].length;
 }
+
+/** Identity of a named set of bars. Symbol order is the order given. */
+export function tapeHash(books: { symbol: string; bars: { t: number; open: number; high: number; low: number; close: number; volume: number }[] }[]): string {
+  const lines: string[] = [];
+  for (const book of books) {
+    for (const bar of book.bars) {
+      lines.push([book.symbol, bar.t, bar.open, bar.high, bar.low, bar.close, bar.volume].join(","));
+    }
+  }
+  return createHash("sha256").update(lines.join("\n")).digest("hex");
+}

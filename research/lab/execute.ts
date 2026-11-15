@@ -26,24 +26,37 @@ export type BookRun = {
 export type CostModel = {
   fee: number;
   slippage: number;
+  /** Exit fee. Omitted means the same taker fee as the entry. */
+  exitFee?: number;
+  /** Exit slippage. Omitted means the same slippage as the entry. A resting limit uses 0. */
+  exitSlippage?: number;
+  /**
+   * Fraction of notional charged once per day the position is open.
+   * Longs pay it. Shorts receive it. Omitted means no funding.
+   */
+  fundingPerDay?: number;
 };
 
 export const ZERO_COSTS: CostModel = { fee: 0, slippage: 0 };
 
 /**
- * Round-trip return after taker fees and adverse slippage.
+ * Round-trip return after fees, adverse slippage, and funding.
  * A long buys the open higher and sells the exit lower. A short does the opposite.
+ * With no exit override and no funding, this is the desk's taker-plus-slippage formula.
  */
-export function netReturn(side: Side, entry: number, exit: number, costs: CostModel): number {
-  const feeFactor = (1 - costs.fee) * (1 - costs.fee);
+export function netReturn(side: Side, entry: number, exit: number, costs: CostModel, holdDays = 0): number {
+  const exitFee = costs.exitFee ?? costs.fee;
+  const exitSlippage = costs.exitSlippage ?? costs.slippage;
+  const feeFactor = (1 - costs.fee) * (1 - exitFee);
+  const funding = (costs.fundingPerDay ?? 0) * holdDays;
   if (side === "LONG") {
     const buy = entry * (1 + costs.slippage);
-    const sell = exit * (1 - costs.slippage);
-    return (sell / buy) * feeFactor - 1;
+    const sell = exit * (1 - exitSlippage);
+    return (sell / buy) * feeFactor - 1 - funding;
   }
   const sold = entry * (1 - costs.slippage);
-  const cover = exit * (1 + costs.slippage);
-  return (sold / cover) * feeFactor - 1;
+  const cover = exit * (1 + exitSlippage);
+  return (sold / cover) * feeFactor - 1 + funding;
 }
 
 /**
@@ -69,15 +82,20 @@ export function runBook(
   const weight = 1 / symbols.length;
   const n = series[symbols[0]!]!.length;
   const endSignal = Math.min(to, n - 1);
+  const step = n >= 2 ? series[symbols[0]!]![1]!.t - series[symbols[0]!]![0]!.t : 86_400_000;
   let equity = startEquity;
   const open = new Map<SymbolName, { side: Side; entry: number; opened: number; signal: number }>();
   const fills: Fill[] = [];
   const curve: number[] = [startEquity];
 
-  const closeAt = (symbol: SymbolName, px: number, closedIndex: number) => {
+  const closeAt = (symbol: SymbolName, px: number, closedIndex: number, atClose = false) => {
     const pos = open.get(symbol);
     if (!pos) return;
-    const ret = netReturn(pos.side, pos.entry, px, costs);
+    const openedT = series[symbol]![pos.opened]!.t;
+    const closedT = series[symbol]![closedIndex]!.t + (atClose ? step : 0);
+    const holdDays =
+      (costs.fundingPerDay ?? 0) !== 0 ? Math.max(0, (closedT - openedT) / 86_400_000) : 0;
+    const ret = netReturn(pos.side, pos.entry, px, costs, holdDays);
     const pnl = equity * weight * ret;
     equity += pnl;
     fills.push({
@@ -127,7 +145,7 @@ export function runBook(
   }
 
   const end = Math.min(endSignal, n - 1);
-  for (const symbol of symbols) closeAt(symbol, series[symbol]![end]!.close, end);
+  for (const symbol of symbols) closeAt(symbol, series[symbol]![end]!.close, end, true);
   if (curve.length === 1) curve.push(equity);
   else curve[curve.length - 1] = equity;
 

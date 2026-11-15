@@ -2193,3 +2193,298 @@ Insufficient sample: Need 30 closed trades on each coin over the full sample. Go
 
 Deflated Sharpe uses 9 trials. Daily Sharpe 0.0853, hurdle 0.0365, z=0.834. The z statistic is not a probability and it is not a confidence.
 
+
+## Comparison — Falcon vs Quantum
+
+- At: 2026-11-15T07:12:16.933Z
+- Commit: `059b6764c3475ba0eb9da5e261e80496089b6966`
+- Seed: 20261114
+- This is not a cycle. It was not appended to `research/lab/ledger.jsonl`, so it does not add a trial for the next `npm run lab:cycle`.
+- docs/LAB_LEDGER.md and research/lab/data/quantum-falcon-result.json are the only files this run writes. `research/lab/candidate.json` was not written. `src/lib/desk` was not edited.
+
+### What was compared
+
+Falcon is the published book: V-Pro 34/9, EMA 20/30, and shorts skipped while the close is above the 20 EMA. Quantum is a separate book. Its daily signal is an EMA 9/21 cross. The take-profit is 0.5% and the stop is 10%. The full book also exits on the 15-minute failsafes. The daily-only book is the same cross, target, and stop with those failsafes turned off, so their effect is visible.
+
+Every figure below gives each coin its own $10,000. The coins do not share a stake. A two-coin book therefore starts at $20,000, Falcon's three-coin book at $30,000, and Quantum's four-coin book at $40,000. Summed profits are not compared across those different sets. The head-to-head is Ethereum and Solana only.
+
+The ranking rule was fixed in the runner before this tape was scored. On Ethereum and Solana, under the lab's own costs, a book held up better only when its holdout profit was higher and its holdout max drawdown was not worse. The Binance fee schedule is a sensitivity. The skeptic is the lab's skeptic and can refuse a book that won the comparison. Sharpe and the deflated-Sharpe z are test statistics, not probabilities.
+
+### Assumptions
+
+- Long and short are both allowed. The published short-skip above the 20 EMA belongs to Falcon and is not applied here. The desk has no description of this bot.
+- A cross is the entry. The stance is not held. After a take-profit, stop, or failsafe, the coin stays flat until EMA 9 crosses EMA 21 again.
+- The cross is known at the daily close and fills at the next day's open. An opposite cross closes at that next open. The new side waits one more day, the same one-bar delay the desk uses when it will not reverse on the exit bar.
+- Take-profit is a resting limit at 0.5% from the fill. Stop-loss is a stop at 10% from the fill. Both are measured from the entry price, not from the signal close.
+- When a bar's range touches the target and a stop, the stop fills. That is the pessimistic path. A gap through a stop fills at the open. A gap through the take-profit still fills at the limit price.
+- The trailing stop is assumed at 1.5% from the best price since entry (the high for a long, the low for a short). It is active immediately, so it is tighter than the 10% stop from the first bar. It uses the extreme known before the current bar.
+- The spike guard is the specified 1% move. On a 15-minute bar, a long exits if the low reaches 1% under that bar's open, and a short exits if the high reaches 1% over that open. The fill is that 1% level, or the open if the bar opens through it.
+- EMA 9 reversal means the 15-minute close crosses the 15-minute EMA 9 against the position: a long exits when the close goes from at or above the EMA to below it, and a short does the opposite. It fills at the next 15-minute open. An EMA-slope flip was not used.
+- The volume-surge exit is the specified 3×. The average is the prior 20 fifteen-minute bars, the same lookback the desk uses for its volume rule, and the current bar is not inside that average. Any 3× bar exits, in either direction. It fills at the next 15-minute open. If the EMA reversal and the surge arm on the same close, the exit is counted as the EMA reversal.
+- Among stops touched in one bar, the one closest to the open in the adverse direction fills first. For a long that is the highest stop. For a short it is the lowest.
+- Each window starts flat and flattens at its last bar's close. A 15-minute failsafe cannot see a bar that has not closed. Funding uses the fill bar's open time, so a round trip inside the entry bar accrues none.
+- One times leverage is a fully funded cash return on that coin's own stake. There is no exchange liquidation engine and no shared margin.
+- The lab cost is 0.1% taker and 5 bps of slippage on the entry and the exit, including the take-profit. The Binance USDT-M schedule is 0.05% taker, 0.02% maker on the resting take-profit, no extra slippage, and a flat 0.01% per day paid by longs and received by shorts. Falcon has no resting limit, so both of its sides pay the taker fee under that second schedule. Funding on Falcon is the same flat assumption, applied only so the cost models match. The desk itself is not a perpetual swap.
+- Neighbours move only the two assumed widths: the trail 1.5% to 1.0% and to 2.0%, and the volume average from 20 bars to 10 and to 30. The specified 0.5% target, 10% stop, 1% spike, 3× surge, and EMA 9 were not searched.
+
+### Tape
+
+- Pinned daily tape: bundled src/lib/desk/clocks.ts daily plus cached OKX 1Dutc. 726 bars, 2024-11-18 → 2026-11-13. Hash `ea1894d6076c4e9305fd7c2b538af91c5deef84b08aa25921bbde1195806acbc`.
+- Train signals start 2025-02-06. Holdout signals start 2026-02-25. The book is marked through 2026-11-13. Same split as the ledger.
+- Ethereum and Solana 15-minute bars are the pinned OKX file, hash `91991f53169d15ef73e8ed26ec8dd2213576b85f8acefd255c038c1aea292a93`. The ETH+SOL slice hash is `e852a2e0e021c7af31eb0b2aabcb6048663893b12da0b4a9f5516227a641bdf3`. https://www.okx.com/api/v5/market/history-candles?bar=15m.
+- BNB and XRP are not in that file. Spot USDT candles. Confirmed OKX rows only. No API key. Binance was probed and not used when OKX answered, so these coins match the pinned 15-minute tape's venue. Source `https://www.okx.com/api/v5/market/history-candles`, fallback `https://my.okx.com`, fetched 2026-11-15T07:10:18.755Z, kept from 2024-11-14T00:00:00.000Z. Hash `faf2440aac3cf4e560984e5cc304393b0dbd73ed8aeedda827cf8d200f0d8754`.
+- Binance probe: fapi.binance.com HTTP 451; api.binance.com HTTP 451. Not used.
+- BNB daily bars 726, 2024-11-18T00:00:00.000Z → 2026-11-13T00:00:00.000Z, missing slots 0, duplicates 0.
+- XRP daily bars 726, 2024-11-18T00:00:00.000Z → 2026-11-13T00:00:00.000Z, missing slots 0, duplicates 0.
+- ETH/USD 15-minute: 70120 bars, 2024-11-14T00:00:00.000Z → 2026-11-14T09:45:00.000Z, missing slots 0, duplicates 0. Pinned days with no 15-minute bar: 0. Days with fewer than 90 bars: 0. Median absolute gap between the daily open and the first 15-minute open: 0.040% (max 0.381%, 726 days).
+- SOL/USD 15-minute: 70120 bars, 2024-11-14T00:00:00.000Z → 2026-11-14T09:45:00.000Z, missing slots 0, duplicates 0. Pinned days with no 15-minute bar: 0. Days with fewer than 90 bars: 0. Median absolute gap between the daily open and the first 15-minute open: 0.039% (max 2.026%, 726 days).
+- BNB/USD 15-minute: 70204 bars, 2024-11-14T00:00:00.000Z → 2026-11-15T06:45:00.000Z, missing slots 0, duplicates 0. Pinned days with no 15-minute bar: 0. Days with fewer than 90 bars: 0. Median absolute gap between the daily open and the first 15-minute open: 0.000% (max 0.000%, 726 days).
+- XRP/USD 15-minute: 70204 bars, 2024-11-14T00:00:00.000Z → 2026-11-15T06:45:00.000Z, missing slots 0, duplicates 0. Pinned days with no 15-minute bar: 0. Days with fewer than 90 bars: 0. Median absolute gap between the daily open and the first 15-minute open: 0.000% (max 0.000%, 726 days).
+
+### Ledger check
+
+The published three-coin shared book, lab costs, still prints train $5,941.96 and holdout $5,522.78. Full-sample trades stay BTC 28, ETH 25, SOL 24. That is the ledger's book. The tables below are not that book: each coin has its own $10,000.
+
+### Ethereum and Solana, lab costs
+
+| Book | Train profit | Train trades | Holdout profit | Holdout max DD | Holdout trades |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Falcon | $10,699.81 | 30 | $11,981.37 | 22.93% | 18 |
+| Quantum | -$723.26 | 24 | -$780.02 | 3.90% | 16 |
+| Quantum, no failsafes | $145.87 | 24 | $322.58 | 1.01% | 16 |
+
+Holdout, each coin on its own $10,000:
+
+| Coin | Falcon profit | Falcon trades | Quantum profit | Quantum trades | No failsafes profit | No failsafes trades |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| ETH/USD | $5,743.72 | 9 | -$204.32 | 6 | $120.66 | 6 |
+| SOL/USD | $6,237.65 | 9 | -$575.70 | 10 | $201.92 | 10 |
+
+Walk-forward folds, anchored, each fold started flat. Profit, trades, max drawdown:
+
+| Fold | Falcon | Quantum | No failsafes |
+| --- | ---: | ---: | ---: |
+| 2025-08-16 → 2025-10-03 | -$1,627.63 (5, 12.57%) | -$143.56 (4, 0.72%) | $80.41 (4, 0.00%) |
+| 2025-10-03 → 2025-11-20 | $2,384.19 (6, 23.80%) | -$335.76 (4, 1.68%) | $80.12 (4, 1.62%) |
+| 2025-11-20 → 2026-01-07 | -$1,272.95 (3, 9.72%) | -$59.81 (4, 0.40%) | $79.91 (4, 0.13%) |
+| 2026-01-07 → 2026-02-24 | $8,839.43 (4, 13.49%) | -$196.49 (2, 0.98%) | $40.27 (2, 0.00%) |
+
+Holdout trade quality. Falcon: win rate 50.00%, average win $1,797.82, average loss -$466.55, worst -$983.23 (SOL/USD long -10.06%, desk), longest losing streak 3. Quantum: win rate 6.25%, average win $19.53, average loss -$53.30, worst -$165.12 (SOL/USD long -1.66%, trail), longest losing streak 11. No failsafes: win rate 100.00%, average win $20.16, average loss n/a, worst $19.89 (ETH/USD long 0.20%, tp), longest losing streak 0.
+
+Full sample, from the first train signal through the last bar, one continuous run. Falcon trades ETH/USD 25, SOL/USD 24. win rate 44.90%, average win $2,048.49, average loss -$779.08, worst -$1,767.11 (ETH/USD long -15.30%, desk), longest losing streak 5. Quantum trades ETH/USD 18, SOL/USD 22. win rate 30.00%, average win $19.74, average loss -$61.31, worst -$161.24 (SOL/USD long -1.66%, trail), longest losing streak 13. No failsafes: ETH/USD 18, SOL/USD 22. win rate 97.50%, average win $20.09, average loss -$314.05, worst -$314.05 (SOL/USD short -3.12%, cross), longest losing streak 1.
+
+Quantum exits. A tie between the EMA reversal and the volume surge on the same close is counted as the EMA reversal.
+
+| Exit | Quantum train | Quantum holdout | Quantum full | No failsafes train | No failsafes holdout | No failsafes full |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| tp | 11 | 1 | 12 | 23 | 16 | 39 |
+| sl | 0 | 0 | 0 | 0 | 0 | 0 |
+| trail | 0 | 1 | 1 | 0 | 0 | 0 |
+| spike | 3 | 0 | 3 | 0 | 0 | 0 |
+| ema9 | 9 | 12 | 21 | 0 | 0 | 0 |
+| volume | 1 | 2 | 3 | 0 | 0 | 0 |
+| cross | 0 | 0 | 0 | 1 | 0 | 1 |
+| flatten | 0 | 0 | 0 | 0 | 0 | 0 |
+
+Signal ties: Quantum train 0, holdout 0, full 0. Days that fell back to the daily bar because the 15-minute session was missing: train 0, holdout 0. Short sessions: train 0, holdout 0.
+
+### Ethereum and Solana, Binance USDT-M costs
+
+| Book | Train profit | Train trades | Holdout profit | Holdout max DD | Holdout trades |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Falcon | $11,685.40 | 30 | $12,472.18 | 22.40% | 18 |
+| Quantum | -$222.40 | 24 | -$468.17 | 2.34% | 16 |
+| Quantum, no failsafes | $702.64 | 24 | $703.78 | 0.78% | 16 |
+
+| Coin | Falcon profit | Falcon trades | Quantum profit | Quantum trades | No failsafes profit | No failsafes trades |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| ETH/USD | $5,985.39 | 9 | -$82.95 | 6 | $264.42 | 6 |
+| SOL/USD | $6,486.79 | 9 | -$385.21 | 10 | $439.37 | 10 |
+
+| Fold | Falcon | Quantum | No failsafes |
+| --- | ---: | ---: | ---: |
+| 2025-08-16 → 2025-10-03 | -$1,574.02 (5, 12.43%) | -$57.60 (4, 0.54%) | $173.18 (4, 0.00%) |
+| 2025-10-03 → 2025-11-20 | $2,582.29 (6, 23.60%) | -$254.13 (4, 1.27%) | $170.73 (4, 1.44%) |
+| 2025-11-20 → 2026-01-07 | -$1,200.65 (3, 9.72%) | $25.85 (4, 0.24%) | $171.66 (4, 0.03%) |
+| 2026-01-07 → 2026-02-24 | $8,969.07 (4, 13.44%) | -$156.76 (2, 0.78%) | $86.43 (2, 0.00%) |
+
+Holdout trade quality. Falcon: win rate 55.56%, average win $1,652.26, average loss -$506.30, worst -$997.41 (SOL/USD long -10.12%, desk), longest losing streak 3. Quantum: win rate 18.75%, average win $19.13, average loss -$40.43, worst -$146.24 (SOL/USD long -1.47%, trail), longest losing streak 7. No failsafes: win rate 100.00%, average win $43.99, average loss n/a, worst $42.97 (ETH/USD long 0.43%, tp), longest losing streak 0.
+
+Full sample. Falcon ETH/USD 25, SOL/USD 24. win rate 46.94%, average win $2,048.57, average loss -$804.68, worst -$1,789.88 (ETH/USD long -15.18%, desk), longest losing streak 5. Quantum ETH/USD 18, SOL/USD 22. win rate 37.50%, average win $36.17, average loss -$49.28, worst -$146.58 (SOL/USD long -1.47%, trail), longest losing streak 7. No failsafes: ETH/USD 18, SOL/USD 22. win rate 97.50%, average win $44.20, average loss -$295.56, worst -$295.56 (SOL/USD short -2.92%, cross), longest losing streak 1.
+
+| Exit | Quantum train | Quantum holdout | Quantum full | No failsafes train | No failsafes holdout | No failsafes full |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| tp | 11 | 1 | 12 | 23 | 16 | 39 |
+| sl | 0 | 0 | 0 | 0 | 0 | 0 |
+| trail | 0 | 1 | 1 | 0 | 0 | 0 |
+| spike | 3 | 0 | 3 | 0 | 0 | 0 |
+| ema9 | 9 | 12 | 21 | 0 | 0 | 0 |
+| volume | 1 | 2 | 3 | 0 | 0 | 0 |
+| cross | 0 | 0 | 0 | 1 | 0 | 1 |
+| flatten | 0 | 0 | 0 | 0 | 0 | 0 |
+
+### Each book on its own coins, lab costs
+
+Falcon's coins are Bitcoin, Ethereum, and Solana. Quantum's coins are Ethereum, Solana, BNB, and XRP. Bitcoin is not in the Quantum book. These two sums do not share a denominator.
+
+| Book | Train profit | Train trades | Holdout profit | Holdout max DD | Holdout trades |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Falcon, 3 coins | $12,989.62 | 47 | $14,882.50 | 18.76% | 30 |
+| Quantum, 4 coins | -$1,720.34 | 50 | -$1,472.78 | 3.78% | 42 |
+| Quantum, no failsafes | -$2,039.56 | 50 | -$2,732.01 | 7.47% | 41 |
+
+Falcon holdout, each coin on its own $10,000:
+
+| Coin | Falcon profit | Falcon trades |
+| --- | ---: | ---: |
+| BTC/USD | $2,901.13 | 12 |
+| ETH/USD | $5,743.72 | 9 |
+| SOL/USD | $6,237.65 | 9 |
+
+Quantum holdout, each coin on its own $10,000:
+
+| Coin | Quantum profit | Quantum trades | No failsafes profit | No failsafes trades |
+| --- | ---: | ---: | ---: | ---: |
+| ETH/USD | -$204.32 | 6 | $120.66 | 6 |
+| SOL/USD | -$575.70 | 10 | $201.92 | 10 |
+| BNB/USD | -$242.80 | 12 | -$1,939.51 | 12 |
+| XRP/USD | -$449.96 | 14 | -$1,115.08 | 13 |
+
+Falcon folds:
+
+| Fold | Falcon |
+| --- | ---: |
+| 2025-08-16 → 2025-10-03 | -$2,762.97 (9, 9.87%) |
+| 2025-10-03 → 2025-11-20 | $3,127.91 (9, 19.92%) |
+| 2025-11-20 → 2026-01-07 | -$1,828.14 (4, 8.65%) |
+| 2026-01-07 → 2026-02-24 | $12,022.58 (6, 12.51%) |
+
+Quantum folds:
+
+| Fold | Quantum | No failsafes |
+| --- | ---: | ---: |
+| 2025-08-16 → 2025-10-03 | -$215.82 (7, 0.54%) | $140.69 (7, 0.00%) |
+| 2025-10-03 → 2025-11-20 | -$437.19 (7, 1.09%) | -$816.15 (7, 2.33%) |
+| 2025-11-20 → 2026-01-07 | -$20.04 (6, 0.20%) | $119.68 (6, 0.06%) |
+| 2026-01-07 → 2026-02-24 | -$266.60 (4, 0.67%) | $80.54 (4, 0.00%) |
+
+Holdout quality. Falcon: win rate 50.00%, average win $1,415.00, average loss -$422.83, worst -$983.23 (SOL/USD long -10.06%, desk), longest losing streak 5. Quantum: win rate 26.19%, average win $19.68, average loss -$54.49, worst -$166.05 (BNB/USD short -1.67%, trail), longest losing streak 10. No failsafes: win rate 85.37%, average win $19.46, average loss -$568.85, worst -$920.67 (BNB/USD long -10.27%, sl), longest losing streak 1.
+
+Full-sample trades. Falcon BTC/USD 28, ETH/USD 25, SOL/USD 24. win rate 41.56%, average win $1,776.96, average loss -$618.77, worst -$1,767.11 (ETH/USD long -15.30%, desk), longest losing streak 8. Quantum ETH/USD 18, SOL/USD 22, BNB/USD 24, XRP/USD 28. win rate 34.78%, average win $19.31, average loss -$62.56, worst -$173.95 (BNB/USD long -1.73%, trail), longest losing streak 10. No failsafes: ETH/USD 18, SOL/USD 22, BNB/USD 24, XRP/USD 27. win rate 87.91%, average win $19.00, average loss -$538.24, worst -$896.78 (XRP/USD short -8.91%, cross), longest losing streak 2.
+
+| Exit | Quantum train | Quantum holdout | Quantum full | No failsafes train | No failsafes holdout | No failsafes full |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| tp | 21 | 11 | 32 | 45 | 35 | 80 |
+| sl | 0 | 0 | 0 | 1 | 2 | 3 |
+| trail | 1 | 2 | 3 | 0 | 0 | 0 |
+| spike | 3 | 0 | 3 | 0 | 0 | 0 |
+| ema9 | 23 | 25 | 48 | 0 | 0 | 0 |
+| volume | 2 | 4 | 6 | 0 | 0 | 0 |
+| cross | 0 | 0 | 0 | 4 | 4 | 8 |
+| flatten | 0 | 0 | 0 | 0 | 0 | 0 |
+
+### Each book on its own coins, Binance USDT-M costs
+
+| Book | Train profit | Train trades | Holdout profit | Holdout max DD | Holdout trades |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Falcon, 3 coins | $14,450.63 | 47 | $15,649.03 | 18.18% | 30 |
+| Quantum, 4 coins | -$688.89 | 50 | -$622.61 | 1.85% | 42 |
+| Quantum, no failsafes | -$958.51 | 50 | -$1,860.04 | 6.06% | 41 |
+
+| Coin | Falcon profit | Falcon trades |
+| --- | ---: | ---: |
+| BTC/USD | $3,176.85 | 12 |
+| ETH/USD | $5,985.39 | 9 |
+| SOL/USD | $6,486.79 | 9 |
+
+| Coin | Quantum profit | Quantum trades | No failsafes profit | No failsafes trades |
+| --- | ---: | ---: | ---: | ---: |
+| ETH/USD | -$82.95 | 6 | $264.42 | 6 |
+| SOL/USD | -$385.21 | 10 | $439.37 | 10 |
+| BNB/USD | $12.41 | 12 | -$1,717.92 | 12 |
+| XRP/USD | -$166.86 | 14 | -$845.91 | 13 |
+
+| Fold | Falcon |
+| --- | ---: |
+| 2025-08-16 → 2025-10-03 | -$2,621.64 (9, 9.78%) |
+| 2025-10-03 → 2025-11-20 | $3,409.67 (9, 19.50%) |
+| 2025-11-20 → 2026-01-07 | -$1,724.94 (4, 8.65%) |
+| 2026-01-07 → 2026-02-24 | $12,219.61 (6, 12.46%) |
+
+| Fold | Quantum | No failsafes |
+| --- | ---: | ---: |
+| 2025-08-16 → 2025-10-03 | -$64.05 (7, 0.32%) | $303.14 (7, 0.00%) |
+| 2025-10-03 → 2025-11-20 | -$292.61 (7, 0.75%) | -$657.09 (7, 2.27%) |
+| 2025-11-20 → 2026-01-07 | $111.77 (6, 0.12%) | $257.60 (6, 0.02%) |
+| 2026-01-07 → 2026-02-24 | -$186.93 (4, 0.48%) | $172.87 (4, 0.00%) |
+
+Holdout quality. Falcon: win rate 53.33%, average win $1,359.71, average loss -$436.16, worst -$997.41 (SOL/USD long -10.12%, desk), longest losing streak 5. Quantum: win rate 33.33%, average win $35.19, average loss -$39.83, worst -$147.95 (BNB/USD short -1.47%, trail), longest losing streak 7. No failsafes: win rate 85.37%, average win $42.46, average loss -$557.67, worst -$925.44 (BNB/USD long -10.09%, sl), longest losing streak 1.
+
+Full-sample trades. Falcon BTC/USD 28, ETH/USD 25, SOL/USD 24. win rate 42.86%, average win $1,805.84, average loss -$625.62, worst -$1,789.88 (ETH/USD long -15.18%, desk), longest losing streak 8. Quantum ETH/USD 18, SOL/USD 22, BNB/USD 24, XRP/USD 28. win rate 41.30%, average win $36.70, average loss -$50.05, worst -$154.98 (BNB/USD long -1.54%, trail), longest losing streak 7. No failsafes: ETH/USD 18, SOL/USD 22, BNB/USD 24, XRP/USD 27. win rate 87.91%, average win $41.69, average loss -$534.26, worst -$883.50 (XRP/USD short -8.72%, cross), longest losing streak 2.
+
+| Exit | Quantum train | Quantum holdout | Quantum full | No failsafes train | No failsafes holdout | No failsafes full |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| tp | 21 | 11 | 32 | 45 | 35 | 80 |
+| sl | 0 | 0 | 0 | 1 | 2 | 3 |
+| trail | 1 | 2 | 3 | 0 | 0 | 0 |
+| spike | 3 | 0 | 3 | 0 | 0 | 0 |
+| ema9 | 23 | 25 | 48 | 0 | 0 | 0 |
+| volume | 2 | 4 | 6 | 0 | 0 | 0 |
+| cross | 0 | 0 | 0 | 4 | 4 | 8 |
+| flatten | 0 | 0 | 0 | 0 | 0 | 0 |
+
+### Skeptic
+
+Quantum with the failsafes is the challenger. Falcon on the same two coins is the champion. The daily-only book is not a second challenger. The prior list is the daily V-Pro track already in the ledger, 9 holdout Sharpes, so this comparison is scored as trial 10 on that list. It was not written into the ledger, and the Binance pass uses the same prior list rather than stacking on the lab pass.
+
+Lab costs: **INSUFFICIENT**. Insufficient sample: Need 30 closed trades on each coin over the full sample. Got ETH/USD 18 (champion 25), SOL/USD 22 (champion 24). Other failed gates: train, holdout, walk-forward, deflated-sharpe, neighbours.
+
+- fail `trades`: Need 30 closed trades on each coin over the full sample. Got ETH/USD 18 (champion 25), SOL/USD 22 (champion 24).
+- fail `train`: Train profit $10,699.81 → -$723.26.
+- fail `holdout`: Holdout profit $11,981.37 → -$780.02. Buy and hold on that window was -$1,734.93.
+- fail `walk-forward`: Beat the champion on 2 of 4 anchored folds. Most means more than half.
+- pass `drawdown`: Max drawdown train 39.29% → 3.90%, holdout 22.93% → 3.90%. No worse means less than or equal to the champion on both windows.
+- fail `deflated-sharpe`: Holdout daily Sharpe -0.1958 did not clear hurdle 0.1456 (z=-11.162, trials=10, variance=0.008546). The statistic is not a probability.
+- fail `neighbours`: 0 of 4 one-step neighbours beat the champion's holdout profit. A majority is required, so a one-cell spike does not pass.
+
+Deflated Sharpe uses 10 trials. Daily Sharpe -0.1958, hurdle 0.1456, z=-11.162. The z statistic is not a probability and it is not a confidence.
+
+Neighbours, lab costs, holdout profit on Ethereum and Solana:
+
+- trail 1.5% → 1.0%: -$783.08, does not beat Falcon.
+- trail 1.5% → 2.0%: -$763.10, does not beat Falcon.
+- volume lookback 20 → 10: -$778.96, does not beat Falcon.
+- volume lookback 20 → 30: -$668.80, does not beat Falcon.
+
+Binance costs: **INSUFFICIENT**. Insufficient sample: Need 30 closed trades on each coin over the full sample. Got ETH/USD 18 (champion 25), SOL/USD 22 (champion 24). Other failed gates: train, holdout, walk-forward, deflated-sharpe, neighbours.
+
+- fail `trades`: Need 30 closed trades on each coin over the full sample. Got ETH/USD 18 (champion 25), SOL/USD 22 (champion 24).
+- fail `train`: Train profit $11,685.40 → -$222.40.
+- fail `holdout`: Holdout profit $12,472.18 → -$468.17. Buy and hold on that window was -$1,734.93.
+- fail `walk-forward`: Beat the champion on 2 of 4 anchored folds. Most means more than half.
+- pass `drawdown`: Max drawdown train 39.04% → 2.45%, holdout 22.40% → 2.34%. No worse means less than or equal to the champion on both windows.
+- fail `deflated-sharpe`: Holdout daily Sharpe -0.1475 did not clear hurdle 0.1224 (z=-7.862, trials=10, variance=0.006042). The statistic is not a probability.
+- fail `neighbours`: 0 of 4 one-step neighbours beat the champion's holdout profit. A majority is required, so a one-cell spike does not pass.
+
+Deflated Sharpe uses 10 trials. Daily Sharpe -0.1475, hurdle 0.1224, z=-7.862. The z statistic is not a probability and it is not a confidence.
+
+- trail 1.5% → 1.0%: -$471.02, does not beat Falcon.
+- trail 1.5% → 2.0%: -$451.02, does not beat Falcon.
+- volume lookback 20 → 10: -$467.11, does not beat Falcon.
+- volume lookback 20 → 30: -$351.63, does not beat Falcon.
+
+### Verdict
+
+On Ethereum and Solana, with each coin on its own $10,000 and the lab's own costs, Falcon's holdout was $11,981.37 and Quantum's was -$780.02. Falcon's average winning trade was $1,797.82 against an average loss of -$466.55. Quantum's average win was $19.53 against an average loss of -$53.30, and the holdout win rate was 6.25%.
+
+Falcon made more money on the holdout. Quantum had the shallower holdout drawdown. The rule needs both, so it does not name a winner. Quantum's drawdown is smaller because the loss itself is small, not because the book earned a smoother profit.
+
+The same split shows up under the Binance fee schedule. Falcon made more money on the holdout. Quantum had the shallower holdout drawdown. The rule needs both, so it does not name a winner.
+
+Quantum was ahead on 2 of 4 walk-forward folds. 2 of those were folds where both books lost and Quantum lost less.
+
+Without the 15-minute failsafes, the same daily cross and 0.5% target made $322.58 on the Ethereum and Solana holdout (drawdown 1.01%, win rate 100.00%). Turning the failsafes on moved that to -$780.02 (-$1,102.60) and the drawdown to 3.90%. On the full two-coin sample the EMA 9 reversal was the exit on 21 of 40 trades. The 10% stop filled 0 times with the failsafes on, and 2 times in the four-coin daily-only holdout. That four-coin daily-only holdout lost money on BNB and XRP.
+
+The skeptic's verdict, Quantum against Falcon, lab costs, is INSUFFICIENT. Insufficient sample: Need 30 closed trades on each coin over the full sample. Got ETH/USD 18 (champion 25), SOL/USD 22 (champion 24). Other failed gates: train, holdout, walk-forward, deflated-sharpe, neighbours. The Binance pass is INSUFFICIENT. The deflated-Sharpe figures are z=-11.162 on the lab costs and z=-7.862 on the Binance costs. Neither z is a probability.
+
+Caveats. The holdout is one window, 25 Feb 2026 through 13 Nov 2026, and neither coin reached the skeptic's 30 closed trades. A few dozen EMA 9/21 crosses cannot identify a 0.5% target. The 1.5% trail and the 20-bar volume average were assumed before the run, not fit to this tape, and none of the four neighbours beat Falcon. Prices are OKX spot. Binance USDT-M and Binance spot both returned HTTP 451, so the funding line is a flat 0.01% per day rather than the historical perpetual rate. A bar that touches both the target and a stop is filled at the stop. One times leverage is a cash return on that coin's own stake, not an exchange liquidation engine. The published desk was not changed.
