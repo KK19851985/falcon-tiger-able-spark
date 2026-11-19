@@ -1,0 +1,328 @@
+//@version=6
+// MACD Signal Lab
+//
+// Chart grader for the six MACD events in "MACD - Signal Statistics [Dots3Red]".
+// It is a study on the loaded chart, not the archive backtest in docs/MACD_SIGNAL_STUDY.md.
+//
+// What it changes:
+//   Every signal is graded, concurrently, up to a capped queue. Repeats are not dropped.
+//   The fill is this bar's open after a cross that closed on the previous bar.
+//   Fees and slippage are inputs, charged on both sides.
+//   A horizon that does not hit is marked at the close. It is not scored as a loss.
+//   The table shows N, hit rate, cost-adjusted breakeven, average R, expectancy
+//   after costs, profit factor, and a normal interval on average R.
+//   Color follows that interval, not a 55/45 hit-rate rule. At 1.5:1 the
+//   zero-cost breakeven hit rate is 40%, and costs push it higher.
+//   Optional filters: EMA200 trend, higher-timeframe MACD, ATR percentile,
+//   histogram direction, regular divergence. The left table ignores them.
+//   The right table applies the filters that are switched on.
+//   Confirmed bars only. The higher-timeframe request uses lookahead off and
+//   the previous completed higher-timeframe bar.
+//
+// The loaded chart is still only the loaded chart. Deep history belongs to the lab study.
+
+indicator("MACD Signal Lab", "MACD Lab", overlay=false, max_labels_count=100)
+
+grpMacd = "MACD"
+fastLen = input.int(12, "Fast", minval=1, group=grpMacd)
+slowLen = input.int(26, "Slow", minval=2, group=grpMacd)
+sigLen = input.int(9, "Signal", minval=1, group=grpMacd)
+atrLen = input.int(14, "ATR length", minval=1, group=grpMacd)
+
+grpExit = "Bracket"
+targetMult = input.float(1.5, "Target, ATR", minval=0.1, step=0.1, group=grpExit)
+stopMult = input.float(1.0, "Stop, ATR", minval=0.1, step=0.1, group=grpExit)
+horizon = input.int(20, "Horizon, bars", minval=1, maxval=200, group=grpExit)
+queueCap = input.int(30, "Open trades kept per signal", minval=1, maxval=50, group=grpExit)
+
+grpCost = "Costs, per side"
+feePct = input.float(0.05, "Fee %", minval=0.0, step=0.01, group=grpCost)
+slipBps = input.float(2.0, "Slippage, bps", minval=0.0, step=0.5, group=grpCost)
+
+grpFilt = "Filters (right-hand table only)"
+useTrend = input.bool(false, "EMA200 with the trade", group=grpFilt)
+emaLen = input.int(200, "Trend EMA", minval=2, group=grpFilt)
+slopeBars = input.int(20, "EMA slope, bars", minval=1, group=grpFilt)
+useHtf = input.bool(false, "Higher-timeframe MACD agrees", group=grpFilt)
+htfTf = input.timeframe("60", "Higher timeframe", group=grpFilt)
+useVol = input.bool(false, "ATR percentile band", group=grpFilt)
+volLen = input.int(200, "ATR percentile length", minval=10, group=grpFilt)
+volMin = input.float(0.0, "ATR percentile min", minval=0.0, maxval=100.0, group=grpFilt)
+volMax = input.float(100.0, "ATR percentile max", minval=0.0, maxval=100.0, group=grpFilt)
+useHist = input.bool(false, "Histogram moving with the trade", group=grpFilt)
+useDiv = input.bool(false, "Require regular divergence", group=grpFilt)
+divWing = input.int(5, "Divergence pivot wing", minval=1, maxval=20, group=grpFilt)
+divActive = input.int(10, "Divergence stays active, bars", minval=1, maxval=50, group=grpFilt)
+
+grpView = "Display"
+minN = input.int(30, "Minimum N before coloring", minval=2, group=grpView)
+showLabels = input.bool(true, "Labels on the price chart", group=grpView)
+showAlerts = input.bool(true, "Alert on a new signal", group=grpView)
+
+float fee = feePct / 100.0
+float slip = slipBps / 10000.0
+float scratch = (1.0 - slip) / (1.0 + slip) * (1.0 - fee) * (1.0 - fee) - 1.0
+float scratchCost = scratch < 0.0 ? -scratch : 0.0
+
+[macdLine, macdSig, hist] = ta.macd(close, fastLen, slowLen, sigLen)
+float atr = ta.atr(atrLen)
+float trend = ta.ema(close, emaLen)
+float atrPct = ta.percentrank(atr, volLen)
+
+htfHist(int fast, int slow, int sig) =>
+    [m, s, h] = ta.macd(close, fast, slow, sig)
+    h[1]
+
+float htfH = request.security(syminfo.tickerid, htfTf, htfHist(fastLen, slowLen, sigLen), lookahead=barmerge.lookahead_off)
+
+float pivLo = ta.pivotlow(low, divWing, divWing)
+float pivHi = ta.pivothigh(high, divWing, divWing)
+bool crossUpNow = ta.crossover(macdLine, macdSig)
+bool crossDnNow = ta.crossunder(macdLine, macdSig)
+bool zeroUpNow = ta.crossover(macdLine, 0.0)
+bool zeroDnNow = ta.crossunder(macdLine, 0.0)
+
+var float prevLo = na
+var float prevLoHist = na
+var int bullDiv = na
+var float prevHi = na
+var float prevHiHist = na
+var int bearDiv = na
+
+type Acc
+    int n
+    int hits
+    int stops
+    int timeouts
+    float sumRet
+    float meanR
+    float m2
+    float grossWin
+    float grossLoss
+    float sumRisk
+
+type OpenTrade
+    int kind
+    int side
+    float entry
+    float stop
+    float limit
+    float risk
+    int entryBar
+    bool filtered
+
+var array<Acc> raw = array.new<Acc>()
+var array<Acc> filt = array.new<Acc>()
+var array<OpenTrade> pending = array.new<OpenTrade>()
+var array<label> marks = array.new<label>()
+var int skipped = 0
+
+if array.size(raw) == 0
+    for i = 0 to 5
+        raw.push(Acc.new(0, 0, 0, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0))
+        filt.push(Acc.new(0, 0, 0, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0))
+
+f_book(array<Acc> book, int kind, string outcome, float netRet, float netR, float riskFrac) =>
+    Acc row = array.get(book, kind)
+    row.n += 1
+    if outcome == "target"
+        row.hits += 1
+    else if outcome == "stop"
+        row.stops += 1
+    else
+        row.timeouts += 1
+    float d1 = netR - row.meanR
+    row.meanR += d1 / row.n
+    float d2 = netR - row.meanR
+    row.m2 += d1 * d2
+    row.sumRet += netRet
+    if netRet > 0.0
+        row.grossWin += netRet
+    else if netRet < 0.0
+        row.grossLoss += -netRet
+    row.sumRisk += riskFrac
+    array.set(book, kind, row)
+
+f_net(int side, float entryPx, float exitPx) =>
+    float feeFactor = (1.0 - fee) * (1.0 - fee)
+    float result = side == 1 ? (exitPx * (1.0 - slip)) / (entryPx * (1.0 + slip)) * feeFactor - 1.0 : (entryPx * (1.0 - slip)) / (exitPx * (1.0 + slip)) * feeFactor - 1.0
+    result
+
+f_close(OpenTrade t, float exitPx, string outcome) =>
+    float netRet = f_net(t.side, t.entry, exitPx)
+    float riskFrac = t.risk / t.entry
+    float netR = riskFrac > 0.0 ? netRet / riskFrac : 0.0
+    f_book(raw, t.kind, outcome, netRet, netR, riskFrac)
+    if t.filtered
+        f_book(filt, t.kind, outcome, netRet, netR, riskFrac)
+
+f_openCount(int kind) =>
+    int n = 0
+    int size = array.size(pending)
+    if size > 0
+        for i = 0 to size - 1
+            OpenTrade row = array.get(pending, i)
+            if row.kind == kind
+                n += 1
+    n
+
+f_settle(OpenTrade t) =>
+    bool stopHit = t.side == 1 ? low <= t.stop : high >= t.stop
+    bool targetHit = t.side == 1 ? high >= t.limit : low <= t.limit
+    string why = ""
+    float exitPx = na
+    if stopHit
+        why := "stop"
+        exitPx := t.side == 1 ? math.min(t.stop, open) : math.max(t.stop, open)
+    else if targetHit
+        why := "target"
+        exitPx := t.limit
+    else if bar_index - t.entryBar + 1 >= horizon
+        why := "timeout"
+        exitPx := close
+    bool done = false
+    if why != ""
+        f_close(t, exitPx, why)
+        done := true
+    done
+
+if barstate.isconfirmed
+    if not na(pivLo)
+        if not na(prevLo) and low[divWing] < prevLo and hist[divWing] > prevLoHist
+            bullDiv := bar_index
+        prevLo := low[divWing]
+        prevLoHist := hist[divWing]
+    if not na(pivHi)
+        if not na(prevHi) and high[divWing] > prevHi and hist[divWing] < prevHiHist
+            bearDiv := bar_index
+        prevHi := high[divWing]
+        prevHiHist := hist[divWing]
+
+    if array.size(pending) > 0
+        for i = array.size(pending) - 1 to 0
+            if f_settle(array.get(pending, i))
+                array.remove(pending, i)
+
+    bool crossUp = crossUpNow[1]
+    bool crossDn = crossDnNow[1]
+    bool below = macdLine[1] < 0.0
+    bool zeroUp = zeroUpNow[1]
+    bool zeroDn = zeroDnNow[1]
+    bool arm0 = crossUp and below
+    bool arm1 = crossUp and not below
+    bool arm2 = crossDn and macdLine[1] > 0.0
+    bool arm3 = crossDn and macdLine[1] <= 0.0
+    bool arm4 = zeroUp
+    bool arm5 = zeroDn
+    bool bullDivOn = not na(bullDiv[1]) and bar_index - 1 >= bullDiv[1] and bar_index - 1 - bullDiv[1] < divActive
+    bool bearDivOn = not na(bearDiv[1]) and bar_index - 1 >= bearDiv[1] and bar_index - 1 - bearDiv[1] < divActive
+    float atrThen = atr[1]
+    bool atrOk = not na(atrThen) and atrThen > 0.0 and not na(open) and open > 0.0
+
+    if atrOk and (arm0 or arm1 or arm2 or arm3 or arm4 or arm5)
+        for kind = 0 to 5
+            bool arm = kind == 0 ? arm0 : kind == 1 ? arm1 : kind == 2 ? arm2 : kind == 3 ? arm3 : kind == 4 ? arm4 : arm5
+            if arm
+                if f_openCount(kind) >= queueCap
+                    skipped += 1
+                else
+                    int side = kind == 2 or kind == 3 or kind == 5 ? -1 : 1
+                    bool trendLong = close[1] > trend[1] and trend[1] > trend[1 + slopeBars]
+                    bool trendShort = close[1] < trend[1] and trend[1] < trend[1 + slopeBars]
+                    bool trendOk = not useTrend or (side == 1 ? trendLong : trendShort)
+                    bool htfOk = not useHtf or (side == 1 ? htfH[1] > 0.0 : htfH[1] < 0.0)
+                    bool volOk = not useVol or (not na(atrPct[1]) and atrPct[1] >= volMin and atrPct[1] <= volMax)
+                    bool histOk = not useHist or (side == 1 ? hist[1] > hist[2] : hist[1] < hist[2])
+                    bool divOk = not useDiv or (side == 1 ? bullDivOn : bearDivOn)
+                    bool pass = trendOk and htfOk and volOk and histOk and divOk
+                    float risk = stopMult * atrThen
+                    float room = targetMult * atrThen
+                    float stopPx = side == 1 ? open - risk : open + risk
+                    float limitPx = side == 1 ? open + room : open - room
+                    pending.push(OpenTrade.new(kind, side, open, stopPx, limitPx, risk, bar_index, pass))
+                    string tag = kind == 0 ? "X+<0" : kind == 1 ? "X+>0" : kind == 2 ? "X->0" : kind == 3 ? "X-<0" : kind == 4 ? "0+" : "0-"
+                    Acc live = array.get(raw, kind)
+                    if showLabels
+                        string text = live.n == 0 ? tag : tag + " " + str.tostring(live.meanR, "#.###") + "R"
+                        label mark = label.new(bar_index, side == 1 ? low : high, text, style=side == 1 ? label.style_label_up : label.style_label_down, color=color.new(#243028, 10), textcolor=#e6d3b1, size=size.small, force_overlay=true)
+                        marks.push(mark)
+                        if array.size(marks) > 80
+                            label.delete(array.shift(marks))
+                    if showAlerts
+                        string name = kind == 0 ? "cross up below zero" : kind == 1 ? "cross up above zero" : kind == 2 ? "cross down above zero" : kind == 3 ? "cross down below zero" : kind == 4 ? "zero cross up" : "zero cross down"
+                        alert(name + "  n=" + str.tostring(live.n) + "  avgR=" + str.tostring(live.meanR, "#.###"), alert.freq_once_per_bar_close)
+
+    if array.size(pending) > 0
+        for i = array.size(pending) - 1 to 0
+            if f_settle(array.get(pending, i))
+                array.remove(pending, i)
+
+f_wilson(int hits, int n) =>
+    float z = 1.95996398454
+    float ph = n > 0 ? hits / n : 0.0
+    float den = 1.0 + z * z / math.max(n, 1)
+    float center = n > 0 ? (ph + z * z / (2.0 * n)) / den : 0.0
+    float margin = n > 0 ? z * math.sqrt(ph * (1.0 - ph) / n + z * z / (4.0 * n * n)) / den : 0.0
+    [center - margin, center + margin]
+
+f_cell(Acc row, string title, table pane, int col) =>
+    float sd = row.n > 1 ? math.sqrt(row.m2 / (row.n - 1)) : na
+    float se = row.n > 1 ? sd / math.sqrt(row.n) : na
+    float lo = row.n > 1 ? row.meanR - 1.95996398454 * se : na
+    float hi = row.n > 1 ? row.meanR + 1.95996398454 * se : na
+    color ink = row.n >= minN and not na(lo) and lo > 0.0 ? color.new(#7dcea0, 0) : row.n >= minN and not na(hi) and hi < 0.0 ? color.new(#e07a6a, 0) : color.new(#c4b48a, 0)
+    float hit = row.n > 0 ? 100.0 * row.hits / row.n : 0.0
+    float rFrac = row.n > 0 ? row.sumRisk / row.n : na
+    float payoff = stopMult > 0.0 ? targetMult / stopMult : na
+    float be = not na(rFrac) and rFrac > 0.0 and not na(payoff) ? 100.0 * (rFrac + scratchCost) / (rFrac * (1.0 + payoff)) : na
+    float expPct = row.n > 0 ? 100.0 * row.sumRet / row.n : na
+    float pf = row.grossLoss > 0.0 ? row.grossWin / row.grossLoss : na
+    [wLo, wHi] = f_wilson(row.hits, row.n)
+    string tip = "Wilson hit interval " + str.tostring(100.0 * wLo, "#.#") + "% to " + str.tostring(100.0 * wHi, "#.#") + "%. Timeouts " + str.tostring(row.timeouts) + ", stops " + str.tostring(row.stops) + ". The interval on average R is a normal approximation, not a probability."
+    table.cell(pane, col, 0, title, text_color=#121816, bgcolor=#e6d3b1, text_size=size.small)
+    table.cell(pane, col, 1, str.tostring(row.n), text_color=#d5ddd6, bgcolor=#121816, text_size=size.small)
+    table.cell(pane, col, 2, row.n > 0 ? str.tostring(hit, "#.#") : "—", text_color=#d5ddd6, bgcolor=#121816, text_size=size.small, tooltip=tip)
+    table.cell(pane, col, 3, na(be) or be > 100.0 ? "—" : str.tostring(be, "#.#"), text_color=#d5ddd6, bgcolor=#121816, text_size=size.small, tooltip="Cost-adjusted breakeven hit rate, percent. Gross 1.5 to 1 is 40 before costs.")
+    table.cell(pane, col, 4, row.n > 0 ? str.tostring(row.meanR, "#.###") : "—", text_color=ink, bgcolor=#121816, text_size=size.small)
+    table.cell(pane, col, 5, na(expPct) ? "—" : str.tostring(expPct, "#.###"), text_color=ink, bgcolor=#121816, text_size=size.small)
+    table.cell(pane, col, 6, na(pf) ? "—" : str.tostring(pf, "#.##"), text_color=#d5ddd6, bgcolor=#121816, text_size=size.small)
+    table.cell(pane, col, 7, na(lo) ? "—" : str.tostring(lo, "#.###"), text_color=ink, bgcolor=#121816, text_size=size.small, tooltip=tip)
+
+var table leftPane = table.new(position.top_right, 8, 8, bgcolor=color.new(#121816, 5), frame_color=#3c463f, frame_width=1, border_color=#2a332e, border_width=1)
+var table rightPane = table.new(position.bottom_right, 8, 8, bgcolor=color.new(#121816, 5), frame_color=#3c463f, frame_width=1, border_color=#2a332e, border_width=1)
+
+if barstate.islast
+    table.cell(leftPane, 0, 0, "All", text_color=#121816, bgcolor=#e6d3b1, text_size=size.small)
+    table.cell(rightPane, 0, 0, "Filtered", text_color=#121816, bgcolor=#e6d3b1, text_size=size.small)
+    for r = 1 to 7
+        string lab = r == 1 ? "N" : r == 2 ? "Hit%" : r == 3 ? "BE%" : r == 4 ? "AvgR" : r == 5 ? "Exp%" : r == 6 ? "PF" : "R low"
+        table.cell(leftPane, 0, r, lab, text_color=#e6d3b1, bgcolor=#1c2420, text_size=size.small)
+        table.cell(rightPane, 0, r, lab, text_color=#e6d3b1, bgcolor=#1c2420, text_size=size.small)
+    f_cell(array.get(raw, 0), "X+<0", leftPane, 1)
+    f_cell(array.get(raw, 1), "X+>0", leftPane, 2)
+    f_cell(array.get(raw, 2), "X->0", leftPane, 3)
+    f_cell(array.get(raw, 3), "X-<0", leftPane, 4)
+    f_cell(array.get(raw, 4), "0+", leftPane, 5)
+    f_cell(array.get(raw, 5), "0-", leftPane, 6)
+    f_cell(array.get(filt, 0), "X+<0", rightPane, 1)
+    f_cell(array.get(filt, 1), "X+>0", rightPane, 2)
+    f_cell(array.get(filt, 2), "X->0", rightPane, 3)
+    f_cell(array.get(filt, 3), "X-<0", rightPane, 4)
+    f_cell(array.get(filt, 4), "0+", rightPane, 5)
+    f_cell(array.get(filt, 5), "0-", rightPane, 6)
+    table.cell(leftPane, 7, 0, "Skip", text_color=#121816, bgcolor=#e6d3b1, text_size=size.small)
+    table.cell(leftPane, 7, 1, str.tostring(skipped), text_color=#d5ddd6, bgcolor=#121816, text_size=size.small, tooltip="Signals not opened because that type's queue was full.")
+    table.cell(rightPane, 7, 0, "Open", text_color=#121816, bgcolor=#e6d3b1, text_size=size.small)
+    table.cell(rightPane, 7, 1, str.tostring(array.size(pending)), text_color=#d5ddd6, bgcolor=#121816, text_size=size.small)
+
+hline(0, "Zero", color=color.new(#8a8175, 35))
+plot(hist, "Histogram", style=plot.style_columns, color=hist >= 0 ? color.new(#6ea88a, 15) : color.new(#c4726a, 15))
+plot(macdLine, "MACD", color=#8fb9a8, linewidth=2)
+plot(macdSig, "Signal", color=#e0b080, linewidth=1)
+
+alertcondition(crossUpNow[1] and macdLine[1] < 0, "Bull cross below zero", "MACD cross up below zero")
+alertcondition(crossUpNow[1] and macdLine[1] >= 0, "Bull cross above zero", "MACD cross up above zero")
+alertcondition(crossDnNow[1] and macdLine[1] > 0, "Bear cross above zero", "MACD cross down above zero")
+alertcondition(crossDnNow[1] and macdLine[1] <= 0, "Bear cross below zero", "MACD cross down below zero")
+alertcondition(zeroUpNow[1], "Zero cross up", "MACD zero cross up")
+alertcondition(zeroDnNow[1], "Zero cross down", "MACD zero cross down")
