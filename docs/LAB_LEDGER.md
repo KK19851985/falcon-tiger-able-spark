@@ -5850,3 +5850,10 @@ strategies:
 - Train is the first 60% of the bars after 384 bars of warmup. Holdout is the rest. Four walk-forward folds cover the second half of the train, each started flat. Seed 20261114. Nothing here edits the desk.
 - The suggested config is not applied. An ACCEPT would still have stayed in the ledger only, and this run does not write a candidate file.
 
+## MACD signal study — not a cycle
+
+This section is not a cycle. It is not in `research/lab/ledger.jsonl`, it is not a trial for the V-Pro or Livermore search, and it does not write `research/lab/candidate.json`. `src/lib/desk` was not edited.
+
+No MACD signal in this grid shows a positive edge after costs that survives the holdout, the non-overlapping replay, the stricter lab cost, Benjamini-Hochberg, and the walk-forward folds. No context filter clears that bar either. The skeptic was still run on the least-bad cell so the book test is on the record. A pass there would mean it lost less than buy-and-hold, or beat it, not that the event study found an edge.
+
+The reading, the assumptions, and the machine-readable tables are in `docs/MACD_SIGNAL_STUDY.md`.
