@@ -2533,3 +2533,71 @@ Insufficient sample: Need 30 closed trades on each coin over the full sample. Go
 
 Deflated Sharpe uses 14 trials. Daily Sharpe 0.1178, hurdle 0.0400, z=1.401. The z statistic is not a probability and it is not a confidence.
 
+## Cycle 38 — 1d — INSUFFICIENT — short-skip line 20 → 50
+
+- At: 2026-11-23T18:59:04.848Z
+- Commit: `78eaf19c3a9a45ce1ad11e9674a7af4711a261da`
+- Seed: 20261114
+- Data: bundled src/lib/desk/clocks.ts daily plus OKX 1Dutc. 735 bars, 2024-11-18 → 2026-11-22. Hash `d9961a26302762906a96d48676a72616e0986987c21ef6add63a438c8eeb70f5`.
+- Binance probe: HTTP 451, not used.
+- Extension: replaced 2026-11-08; appended 2026-11-09, 2026-11-10, 2026-11-11, 2026-11-12, 2026-11-13, 2026-11-14, 2026-11-15, 2026-11-16, 2026-11-17, 2026-11-18, 2026-11-19, 2026-11-20, 2026-11-21, 2026-11-22.
+- Volume scale (bundle / public): BTC/USD 0.4195, ETH/USD 0.2382, SOL/USD 0.3972.
+- Champion: V-Pro 34/9, EMA 20/30, short-skip EMA 20, volume off (`f17c0e57977215b66ff31083e7d5118fdb0be734adb18eba43dc06d262cad753`).
+- Experiment: short-skip line 20 → 50 (`fda19559d6a977291e502452f1429725e255f2edabe4a10a0ba47cc6fb98fcf5`).
+
+### Why this experiment
+
+- Champion is V-Pro 34/9, EMA 20/30, short-skip EMA 20, volume off (f17c0e579772).
+- No direction has been rejected twice.
+- Volume lookback does not change a fill while the volume threshold is off, so those 3 moves wait.
+- shortSkip:up improved holdout profit last time it was tried, so the next step stays on that knob and moves further that way before opening a new knob.
+- Experiment: short-skip line 20 → 50. One variable. 16 unused moves were eligible. Hash fda19559d6a9.
+
+### Holdout, each coin on its own $10,000, after costs
+
+| Coin | Champion profit | Champion trades | Challenger profit | Challenger trades |
+| --- | ---: | ---: | ---: | ---: |
+| BTC/USD | $4,384.00 | 12 | $3,849.78 | 12 |
+| ETH/USD | $7,620.80 | 9 | $7,705.32 | 8 |
+| SOL/USD | $7,952.56 | 9 | $7,448.55 | 10 |
+
+### Combined book
+
+| Window | Champion profit | Challenger profit | Champion max DD | Challenger max DD | Champion daily Sharpe | Challenger daily Sharpe |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| train | $5,941.96 | $8,119.01 | 35.24% | 35.25% | 0.0566 | 0.0661 |
+| holdout | $7,574.31 | $7,235.75 | 20.24% | 19.84% | 0.1132 | 0.1104 |
+
+Buy and hold on the holdout, equal weight, no costs: -$1,523.33.
+
+Bootstrap 2.5 to 97.5 percent of holdout profit, block resample of daily returns, seed 20261114: champion -$1,154.98 to $28,399.09; challenger -$1,278.19 to $27,646.56.
+
+Walk-forward folds (anchored, scored flat at each fold start):
+
+- 2025-08-16 → 2025-10-03: champion -$919.99 (9 trades), challenger -$958.42 (9 trades).
+- 2025-10-03 → 2025-11-20: champion $1,457.15 (9 trades), challenger $1,485.90 (8 trades).
+- 2025-11-20 → 2026-01-07: champion -$603.42 (4 trades), challenger -$603.42 (4 trades).
+- 2026-01-07 → 2026-02-24: champion $4,822.71 (6 trades), challenger $4,822.71 (6 trades).
+
+Full-sample trades: BTC/USD 28 → 26, ETH/USD 25 → 25, SOL/USD 24 → 23.
+
+Challenger holdout by BTC regime at the entry signal (bull above +5% over 20 days, bear below −5%):
+
+- bull: 10 trades, profit $937.10, mean trade 2.59%.
+- bear: 5 trades, profit $3,143.78, mean trade 15.56%.
+- sideways: 15 trades, profit $3,154.87, mean trade 4.69%.
+
+### Verdict
+
+Insufficient sample: Need 30 closed trades on each coin over the full sample. Got BTC/USD 26 (champion 28), ETH/USD 25 (champion 25), SOL/USD 23 (champion 24). Other failed gates: holdout, walk-forward, drawdown, deflated-sharpe, neighbours.
+
+- fail `trades`: Need 30 closed trades on each coin over the full sample. Got BTC/USD 26 (champion 28), ETH/USD 25 (champion 25), SOL/USD 23 (champion 24).
+- pass `train`: Train profit $5,941.96 → $8,119.01.
+- fail `holdout`: Holdout profit $7,574.31 → $7,235.75. Buy and hold on that window was -$1,523.33.
+- fail `walk-forward`: Beat the champion on 1 of 4 anchored folds. Most means more than half.
+- fail `drawdown`: Max drawdown train 35.24% → 35.25%, holdout 20.24% → 19.84%. No worse means less than or equal to the champion on both windows.
+- fail `deflated-sharpe`: Holdout daily Sharpe 0.1104 did not clear hurdle 0.0398 (z=1.267, trials=15, variance=0.000506). The statistic is not a probability.
+- fail `neighbours`: 4 of 13 one-step neighbours beat the champion's holdout profit. A majority is required, so a one-cell spike does not pass.
+
+Deflated Sharpe uses 15 trials. Daily Sharpe 0.1104, hurdle 0.0398, z=1.267. The z statistic is not a probability and it is not a confidence.
+
