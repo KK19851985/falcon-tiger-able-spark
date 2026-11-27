@@ -1,7 +1,7 @@
-// src/lib/desk/livermore.ts
-// Livermore 3-Step: Direction (MA) → Location (Pivotal Point) → Confirmation (Volume)
-// Fully self-contained — no external imports required.
-// This is the leading strategy for the desk.
+/**
+ * Livermore 3-step, as a pure function. The desk does not call this.
+ * Direction, then location, then confirmation. One pass over the bars.
+ */
 
 export type Bar = {
   t: number;
@@ -12,16 +12,32 @@ export type Bar = {
   volume: number;
 };
 
-export const LIVERMORE_SETTINGS = {
-  maPeriod: 50,           // direction filter (rising/falling)
-  maType: "ema" as "ema" | "sma",
-  pivotLookback: 20,      // bars used to detect recent swing high/low
-  volLookback: 20,        // average volume window
-  volMultiplier: 1.5,     // breakout volume must be ≥ this × average
-  confirmBars: 1,         // close must hold beyond level for N bars
+export type LivermoreSide = "LONG" | "SHORT" | "FLAT";
+
+export type LivermoreSettings = {
+  maPeriod: number;
+  pivotLookback: number;
+  volLookback: number;
+  volMultiplier: number;
+  /** Extra closes after the breakout that must still be beyond the level. 1 means the next close. */
+  confirmBars: number;
 };
 
-type Side = "LONG" | "SHORT" | "FLAT";
+export const LIVERMORE_SETTINGS: LivermoreSettings = {
+  maPeriod: 50,
+  pivotLookback: 20,
+  volLookback: 20,
+  volMultiplier: 1.5,
+  confirmBars: 1,
+};
+
+export type LivermoreSignal = {
+  side: LivermoreSide;
+  /** Pivotal level the trade broke. A long stops if price comes back through it. */
+  stop: number | null;
+};
+
+const FIFTEEN_MS = 15 * 60 * 1000;
 
 function ema(values: number[], span: number): number[] {
   const k = 2 / (span + 1);
@@ -34,27 +50,18 @@ function ema(values: number[], span: number): number[] {
   return out;
 }
 
-function sma(values: number[], span: number): number[] {
-  const out = new Array<number>(values.length).fill(Number.NaN);
+function priorAverage(values: number[], i: number, len: number): number {
+  if (i < len) return Number.NaN;
   let acc = 0;
-  for (let i = 0; i < values.length; i++) {
-    acc += values[i]!;
-    if (i >= span) acc -= values[i - span]!;
-    if (i >= span - 1) out[i] = acc / span;
-  }
-  return out;
+  for (let k = i - len; k < i; k++) acc += values[k]!;
+  return acc / len;
 }
 
-function ma(values: number[], span: number, type: "ema" | "sma"): number[] {
-  return type === "ema" ? ema(values, span) : sma(values, span);
-}
-
-/** Detect simple swing high/low pivots over the lookback window. */
-function findPivots(bars: Bar[], i: number, lookback: number): { high: number; low: number } | null {
-  if (i < lookback) return null;
+function priorPivot(bars: Bar[], i: number, len: number): { high: number; low: number } | null {
+  if (i < len) return null;
   let high = -Infinity;
   let low = Infinity;
-  for (let k = i - lookback; k < i; k++) {
+  for (let k = i - len; k < i; k++) {
     high = Math.max(high, bars[k]!.high);
     low = Math.min(low, bars[k]!.low);
   }
@@ -62,120 +69,108 @@ function findPivots(bars: Bar[], i: number, lookback: number): { high: number; l
 }
 
 /**
- * Returns the stance array (LONG / SHORT / FLAT) for the entire series.
- * Only flips when all three conditions align:
- *   1. Price is on the correct side of a rising/falling MA
- *   2. A pivotal level is broken and holds
- *   3. Volume surges on the breakout
+ * Direction from a higher timeframe resampled out of 15-minute bars.
+ * A higher bar is used only after its end time, so the bar still forming is invisible.
  */
-export function livermoreStance(
-  bars: Bar[],
-  settings = LIVERMORE_SETTINGS
-): Side[] {
-  const { maPeriod, maType, pivotLookback, volLookback, volMultiplier, confirmBars } = settings;
-  const closes = bars.map((b) => b.close);
-  const volumes = bars.map((b) => b.volume);
-  const maLine = ma(closes, maPeriod, maType);
-  const avgVol = sma(volumes, volLookback);
-
-  const out: Side[] = new Array(bars.length).fill("FLAT");
-  let side: Side = "FLAT";
-  let confirmCount = 0;
-  let pendingLevel: number | null = null;
-  let pendingSide: Side | null = null;
-
-  for (let i = 1; i < bars.length; i++) {
-    const price = closes[i]!;
-    const prevPrice = closes[i - 1]!;
-    const maNow = maLine[i]!;
-    const maPrev = maLine[i - 1]!;
-    const rising = maNow > maPrev;
-    const falling = maNow < maPrev;
-
-    // Direction filter
-    const longAllowed = price > maNow && rising;
-    const shortAllowed = price < maNow && falling;
-
-    // Volume confirmation
-    const volOk = Number.isFinite(avgVol[i]) && volumes[i]! >= avgVol[i]! * volMultiplier;
-
-    const pivots = findPivots(bars, i, pivotLookback);
-
-    // Reset pending if direction filter fails
-    if (pendingSide === "LONG" && !longAllowed) {
-      pendingSide = null;
-      pendingLevel = null;
-      confirmCount = 0;
-    }
-    if (pendingSide === "SHORT" && !shortAllowed) {
-      pendingSide = null;
-      pendingLevel = null;
-      confirmCount = 0;
-    }
-
-    // Look for new pivotal breakout
-    if (pivots && volOk) {
-      // Long breakout of recent swing high
-      if (longAllowed && prevPrice <= pivots.high && price > pivots.high) {
-        pendingSide = "LONG";
-        pendingLevel = pivots.high;
-        confirmCount = 1;
-      }
-      // Short breakout of recent swing low
-      else if (shortAllowed && prevPrice >= pivots.low && price < pivots.low) {
-        pendingSide = "SHORT";
-        pendingLevel = pivots.low;
-        confirmCount = 1;
-      }
-    }
-
-    // Confirm hold beyond level
-    if (pendingSide && pendingLevel != null) {
-      const holding =
-        (pendingSide === "LONG" && price > pendingLevel) ||
-        (pendingSide === "SHORT" && price < pendingLevel);
-
-      if (holding) {
-        confirmCount++;
-        if (confirmCount >= confirmBars) {
-          side = pendingSide;
-          pendingSide = null;
-          pendingLevel = null;
-          confirmCount = 0;
-        }
-      } else {
-        // Failed to hold → cancel
-        pendingSide = null;
-        pendingLevel = null;
-        confirmCount = 0;
-      }
-    }
-
-    // Exit if direction filter is lost while in a position
-    if (side === "LONG" && !longAllowed) side = "FLAT";
-    if (side === "SHORT" && !shortAllowed) side = "FLAT";
-
-    out[i] = side;
+export function closedHigherEmaDirection(bars: Bar[], tf: "4h", period: number): LivermoreSide[] {
+  const dur = 4 * 60 * 60 * 1000;
+  const buckets: { end: number; close: number }[] = [];
+  for (const bar of bars) {
+    const start = Math.floor(bar.t / dur) * dur;
+    const last = buckets[buckets.length - 1];
+    if (!last || last.end - dur !== start) buckets.push({ end: start + dur, close: bar.close });
+    else last.close = bar.close;
   }
-
+  const line = ema(
+    buckets.map((bucket) => bucket.close),
+    period,
+  );
+  const direction: LivermoreSide[] = buckets.map((bucket, i) => {
+    if (i === 0) return "FLAT";
+    const rising = line[i]! > line[i - 1]!;
+    const falling = line[i]! < line[i - 1]!;
+    if (bucket.close > line[i]! && rising) return "LONG";
+    if (bucket.close < line[i]! && falling) return "SHORT";
+    return "FLAT";
+  });
+  const out: LivermoreSide[] = new Array(bars.length).fill("FLAT");
+  let cursor = -1;
+  for (let i = 0; i < bars.length; i++) {
+    const knownAt = bars[i]!.t + FIFTEEN_MS;
+    while (cursor + 1 < buckets.length && buckets[cursor + 1]!.end <= knownAt) cursor++;
+    if (cursor >= 0) out[i] = direction[cursor]!;
+  }
   return out;
 }
 
 /**
- * Decide function compatible with scoreWindow / scoreOne helpers.
- * Returns the side to hold on bar i (or FLAT to close).
+ * Precomputed signal for every bar. The breakout bar itself never opens a trade.
+ * `confirmBars` counts later closes that are still beyond the pivotal level.
+ * `direction`, when supplied, replaces the local EMA (used for a closed 4-hour EMA).
  */
-export function livermoreDecide(
+export function livermoreSignals(
   bars: Bar[],
-  i: number,
-  settings = LIVERMORE_SETTINGS
-): Side | null {
-  if (i < settings.maPeriod + settings.pivotLookback) return null;
-  const stance = livermoreStance(bars.slice(0, i + 1), settings);
-  return stance[stance.length - 1] ?? null;
-}
+  settings: LivermoreSettings = LIVERMORE_SETTINGS,
+  direction?: LivermoreSide[],
+): LivermoreSignal[] {
+  const closes = bars.map((bar) => bar.close);
+  const volumes = bars.map((bar) => bar.volume);
+  const line = ema(closes, settings.maPeriod);
+  const out: LivermoreSignal[] = new Array(bars.length);
+  let side: LivermoreSide = "FLAT";
+  let stop: number | null = null;
+  let pending: { side: "LONG" | "SHORT"; level: number; count: number; armedAt: number } | null = null;
 
-/** Convenience: full stance for a symbol's bars. */
-export function livermoreStanceForBars(bars: Bar[]): Side[] {
-  return livermoreStance(bars);
+  for (let i = 0; i < bars.length; i++) {
+    const close = closes[i]!;
+    const prevClose = i > 0 ? closes[i - 1]! : close;
+    let longAllowed = false;
+    let shortAllowed = false;
+    if (direction) {
+      longAllowed = direction[i] === "LONG";
+      shortAllowed = direction[i] === "SHORT";
+    } else if (i > 0) {
+      const rising = line[i]! > line[i - 1]!;
+      const falling = line[i]! < line[i - 1]!;
+      longAllowed = close > line[i]! && rising;
+      shortAllowed = close < line[i]! && falling;
+    }
+
+    if (side === "LONG" && !longAllowed) {
+      side = "FLAT";
+      stop = null;
+    } else if (side === "SHORT" && !shortAllowed) {
+      side = "FLAT";
+      stop = null;
+    }
+
+    if (pending && pending.armedAt < i) {
+      const dirOk = pending.side === "LONG" ? longAllowed : shortAllowed;
+      const holding = pending.side === "LONG" ? close > pending.level : close < pending.level;
+      if (dirOk && holding) {
+        pending.count += 1;
+        if (pending.count >= settings.confirmBars && side === "FLAT") {
+          side = pending.side;
+          stop = pending.level;
+          pending = null;
+        }
+      } else {
+        pending = null;
+      }
+    }
+
+    const pivots = priorPivot(bars, i, settings.pivotLookback);
+    const average = priorAverage(volumes, i, settings.volLookback);
+    const volOk = Number.isFinite(average) && volumes[i]! >= average * settings.volMultiplier;
+    if (side === "FLAT" && !pending && pivots && volOk) {
+      if (longAllowed && prevClose <= pivots.high && close > pivots.high) {
+        pending = { side: "LONG", level: pivots.high, count: 0, armedAt: i };
+      } else if (shortAllowed && prevClose >= pivots.low && close < pivots.low) {
+        pending = { side: "SHORT", level: pivots.low, count: 0, armedAt: i };
+      }
+    }
+
+    out[i] = { side, stop: side === "FLAT" ? null : stop };
+  }
+  return out;
 }
